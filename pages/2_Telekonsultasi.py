@@ -10,10 +10,16 @@ import urllib.parse
 def init_connection():
     try:
         scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-        creds = Credentials.from_service_account_file("Kunci.json", scopes=scope)
+        
+        # Ambil data dari Secrets Streamlit (yang tadi Dokter paste di menu Secrets)
+        creds_dict = st.secrets["gcp_service_account"]
+        creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+        
         client = gspread.authorize(creds)
         return client.open("GrowTrack Database").sheet1
-    except Exception:
+    except Exception as e:
+        # Jika gagal, pesan error akan muncul di aplikasi
+        st.error(f"Gagal Terhubung: {e}")
         return None
 
 sheet = init_connection()
