@@ -23,14 +23,15 @@ def init_connection():
         
         # Membaca file kunci JSON yang sudah Dokter pindahkan ke folder project
         # Pastikan nama filenya "Kunci.json" (perhatikan huruf kapital K)
-        creds = Credentials.from_service_account_file("Kunci.json", scopes=scope)
+        creds_dict = st.secrets["gcp_service_account"]
+        creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
         client = gspread.authorize(creds)
         
         # MEMBUKA SPREADSHEET
         # Ganti "Untitled spreadsheet" dengan nama file Sheets Dokter jika sudah diubah
         return client.open("GrowTrack Database").sheet1
     except Exception as e:
-        st.error(f"Koneksi Gagal: Pastikan file 'Kunci.json' ada di folder dan email robot sudah diberi izin akses Editor di Sheets. Error: {e}")
+        st.error(f"Koneksi Gagal: Pastikan pengaturan 'Secrets' di Streamlit Cloud sudah benar dan email robot sudah diberi akses Editor di Google Sheets. Error: {e}")
         return None
 
 # Inisialisasi koneksi agar bisa dipakai di seluruh halaman
