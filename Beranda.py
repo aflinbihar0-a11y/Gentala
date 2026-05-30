@@ -12,7 +12,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Fungsi untuk koneksi ke Google Sheets
+# Fungsi untuk koneksi ke Google Sheets menggunakan Streamlit Secrets
 def init_connection():
     try:
         # Menentukan cakupan akses (scope)
@@ -21,16 +21,17 @@ def init_connection():
             "https://www.googleapis.com/auth/drive"
         ]
         
-        # Membaca file kunci JSON yang sudah Dokter pindahkan ke folder project
-        # Pastikan nama filenya "Kunci.json" (perhatikan huruf kapital K)
-        creds = Credentials.from_service_account_file("Kunci.json", scopes=scope)
+        # BARU: Membaca kredensial dari Streamlit Secrets (bukan file fisik Kunci.json)
+        creds = Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"], 
+            scopes=scope
+        )
         client = gspread.authorize(creds)
         
-        # MEMBUKA SPREADSHEET
-        # Ganti "Untitled spreadsheet" dengan nama file Sheets Dokter jika sudah diubah
+        # Membuka Spreadsheet
         return client.open("GrowTrack Database").sheet1
     except Exception as e:
-        st.error(f"Koneksi Gagal: Pastikan file 'Kunci.json' ada di folder dan email robot sudah diberi izin akses Editor di Sheets. Error: {e}")
+        # Mengembalikan None jika gagal koneksi tanpa memunculkan error file fisik
         return None
 
 # Inisialisasi koneksi agar bisa dipakai di seluruh halaman
@@ -42,18 +43,19 @@ sheet = init_connection()
 st.title("🏥 Selamat Datang di Grow.TrackID")
 st.subheader("Inovasi Program Puskesmas Batu Tangga")
 
-# Informasi Status Koneksi (Hanya muncul jika sukses)
+# Informasi Status Koneksi di Sidebar
 if sheet:
     st.sidebar.success("✅ Database Terhubung")
 else:
     st.sidebar.error("❌ Database Terputus")
+    st.error("Koneksi Gagal: Pastikan konfigurasi 'Secrets' di Streamlit Cloud sudah benar dan email robot (client_email) sudah diberi izin akses Editor di Google Sheets Anda.")
 
 st.markdown("""
 Aplikasi ini dirancang untuk memudahkan tenaga kesehatan dalam memantau pertumbuhan anak dan melakukan koordinasi layanan kesehatan secara digital.
 
 ### 👈 Silakan pilih menu di samping:
 1. **Skrining Gizi**: Untuk input data antropometri (BB/TB) dan cek status gizi anak secara otomatis.
-2. **Skrining Jiwa**: Untuk menilai status mental seseorang (Anak, Dewasa, & Ibu Pasca Melahirkan).
+2. **Skrining Mental**: Untuk menilai status mental seseorang (Anak, Dewasa, & Ibu Pasca Melahirkan).
 3. **Telekonsultasi**: Untuk melaporkan hasil skrining atau berkonsultasi langsung dengan dokter.
 """)
 
