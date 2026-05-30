@@ -1,0 +1,13 @@
+[client]
+# Mengubah nama aplikasi saat di-add to home screen / di-instal di HP
+pageTitle = "Grow.TrackID"
+
+# Mengubah logo favicon tab browser & ikon aplikasi di HP
+iconPath = "logo.png"
+
+[theme]
+# Mengubah warna aksen tombol/elemen utama menjadi hijau khas kesehatan
+primaryColor = "#25D366"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0F2F6"
+textColor = "#31333F"
