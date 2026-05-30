@@ -5,12 +5,17 @@ from datetime import datetime
 import urllib.parse
 
 # ==========================================
-# 1. KONEKSI DATABASE
+# 1. KONEKSI DATABASE VIA STREAMLIT SECRETS
 # ==========================================
 def init_connection():
     try:
         scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-        creds = Credentials.from_service_account_file("Kunci.json", scopes=scope)
+        
+        # BARU: Menggunakan st.secrets (Bukan file fisik Kunci.json)
+        creds = Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"], 
+            scopes=scope
+        )
         client = gspread.authorize(creds)
         return client.open("GrowTrack Database").sheet1
     except Exception:
@@ -19,7 +24,7 @@ def init_connection():
 sheet = init_connection()
 
 # ==========================================
-# 2. TAMPILAN APLIKASI
+# 2. TAMPILAN APLIKASI & SIDEBAR LOGIN
 # ==========================================
 st.set_page_config(page_title="Synapse - Telemedicine", layout="wide")
 
@@ -114,7 +119,7 @@ if st.session_state.akses_diberikan:
 
             submit_btn = st.form_submit_button("KIRIM LAPORAN KE DOKTER")
 
-        # LOGIKA PENGIRIMAN
+        # LOGIKA PENGIRIMAN DATA NAKES
         if submit_btn:
             if sheet and nama_pasien and keluhan_utama:
                 with st.spinner("Menyimpan data laporan ke database..."):
@@ -135,11 +140,12 @@ if st.session_state.akses_diberikan:
                             f"--- A/P ---\n{assessment_plan}"
                         )
                         
+                        # Menyusun baris baru ke Google Sheets
                         baris_baru = [waktu_skrg, "Nakes Pengonsul", nama_pasien, detail_gabungan, "-", "Menunggu Jawaban"]
                         sheet.append_row(baris_baru)
                         st.success("✅ Data Lengkap berhasil disimpan di Database!")
 
-                        # SETUP WHATSAPP DOKTER
+                        # SETUP WHATSAPP GATEWAY DOKTER
                         no_wa_dokter = "6282157263167"
                         pesan_wa = (
                             f"*KONSULTASI BARU: {nama_pasien}*\n"
@@ -162,38 +168,66 @@ if st.session_state.akses_diberikan:
                         
                         st.balloons()
                     except Exception as e:
-                        st.error(f"Gagal simpan: {e}")
+                        st.error(f"Gagal simpan ke database: {e}")
             else:
-                st.error("Lengkapi identitas dan keluhan utama!")
+                st.error("Gagal mengirim! Lengkapi identitas nama pasien dan keluhan utama terlebih dahulu.")
 
     else:
-        # Sisi Dokter (Daftar Konsul)
+        # SISI DOKTER KONSULTAN (DAFTAR KONSUL)
         st.subheader("📥 Daftar Konsultasi Masuk")
         if sheet:
             with st.spinner("Memuat daftar konsultasi dari Google Sheets..."):
-                data = sheet.get_all_records()
+                # Mengambil baris data mentah agar penulisan indeks kolom (1-6) lebih aman
+                data_mentah = sheet.get_all_values()
             
-            data_dengan_baris = list(enumerate(data, start=2))
-            ada_pasien = False
-            
-            for nomor_baris, row in reversed(data_dengan_baris):
-                if row['Status'] == "Menunggu Jawaban":
-                    ada_pasien = True
-                    with st.expander(f"🔴 {row['Timestamp']} - {row['Nama_Pasien']}"):
-                        st.text(row['Detail_Klinis'])
-                        jawab = st.text_area("Balasan Dokter:", key=f"ans_{nomor_baris}")
+            if len(data_mentah) > 1:
+                headers = data_mentah[0]
+                baris_isi = data_mentah[1:]
+                
+                # Menemukan indeks kolom Status dan Jawaban berdasarkan header
+                try:
+                    idx_status = headers.index("Status")
+                    idx_jawaban = headers.index("Jawaban/Saran Dokter") if "Jawaban/Saran Dokter" in headers else 4 # Fallback kolom ke-5
+                except ValueError:
+                    # Default jika nama header kolom kustom berbeda
+                    idx_status = 5 # Kolom F (0-indexed: 5)
+                    idx_jawaban = 4 # Kolom E (0-indexed: 4)
+
+                ada_pasien = False
+                
+                # Menampilkan data dari baris paling baru (Reversed)
+                for i in reversed(range(len(baris_isi))):
+                    row = baris_isi[i]
+                    nomor_baris_sheets = i + 2 # Header + 0-index offset
+                    
+                    # Cek status 'Menunggu Jawaban'
+                    if row[idx_status] == "Menunggu Jawaban":
+                        ada_pasien = True
+                        timestamp = row[0]
+                        nama_p = row[2]
+                        detail_k = row[3]
                         
-                        if st.button("Kirim Jawaban", key=f"btn_{nomor_baris}"):
-                            with st.spinner("Mengirim balasan ke database..."):
-                                sheet.update_cell(nomor_baris, 5, jawab)
-                                sheet.update_cell(nomor_baris, 6, "Sudah Dijawab")
-                            st.success("Jawaban terkirim!")
-                            st.rerun()
-            
-            if not ada_pasien:
-                st.info("🟢 Belum ada konsultasi baru yang menunggu jawaban.")
+                        with st.expander(f"🔴 {timestamp} - {nama_p}"):
+                            st.text(detail_k)
+                            jawab = st.text_area("Balasan Dokter / Rencana Terapi:", key=f"ans_{nomor_baris_sheets}")
+                            
+                            if st.button("Kirim Jawaban Klinik", key=f"btn_{nomor_baris_sheets}"):
+                                if jawab.strip():
+                                    with st.spinner("Mengirim balasan ke database..."):
+                                        # Update kolom Jawaban (kolom ke-5 / E) dan Status (kolom ke-6 / F)
+                                        sheet.update_cell(nomor_baris_sheets, idx_jawaban + 1, jawab)
+                                        sheet.update_cell(nomor_baris_sheets, idx_status + 1, "Sudah Dijawab")
+                                    st.success("✅ Jawaban dan instruksi medis berhasil dikirim!")
+                                    st.rerun()
+                                else:
+                                    st.error("Isi balasan dokter tidak boleh kosong!")
+                
+                if not ada_pasien:
+                    st.info("🟢 Belum ada data konsultasi baru yang memerlukan jawaban.")
+            else:
+                st.info("🟢 Belum ada data konsultasi di dalam lembar database.")
         else:
-            st.error("Koneksi database bermasalah.")
+            st.error("Koneksi database ke Google Sheets terputus.")
 
 else:
     # Tampilan awal beranda pengunci sebelum login
