@@ -23,15 +23,14 @@ def init_connection():
         
         # Membaca file kunci JSON yang sudah Dokter pindahkan ke folder project
         # Pastikan nama filenya "Kunci.json" (perhatikan huruf kapital K)
-        creds_dict = st.secrets["gcp_service_account"]
-        creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+        creds = Credentials.from_service_account_file("Kunci.json", scopes=scope)
         client = gspread.authorize(creds)
         
         # MEMBUKA SPREADSHEET
         # Ganti "Untitled spreadsheet" dengan nama file Sheets Dokter jika sudah diubah
         return client.open("GrowTrack Database").sheet1
     except Exception as e:
-        st.error(f"Koneksi Gagal: Pastikan pengaturan 'Secrets' di Streamlit Cloud sudah benar dan email robot sudah diberi akses Editor di Google Sheets. Error: {e}")
+        st.error(f"Koneksi Gagal: Pastikan file 'Kunci.json' ada di folder dan email robot sudah diberi izin akses Editor di Sheets. Error: {e}")
         return None
 
 # Inisialisasi koneksi agar bisa dipakai di seluruh halaman
@@ -54,7 +53,8 @@ Aplikasi ini dirancang untuk memudahkan tenaga kesehatan dalam memantau pertumbu
 
 ### 👈 Silakan pilih menu di samping:
 1. **Skrining Gizi**: Untuk input data antropometri (BB/TB) dan cek status gizi anak secara otomatis.
-2. **Telekonsultasi**: Untuk melaporkan hasil skrining atau berkonsultasi langsung dengan dokter.
+2. **Skrining Jiwa**: Untuk menilai status mental seseorang (Anak, Dewasa, & Ibu Pasca Melahirkan).
+3. **Telekonsultasi**: Untuk melaporkan hasil skrining atau berkonsultasi langsung dengan dokter.
 """)
 
 st.info("Gunakan menu di sebelah kiri untuk berpindah halaman.")
