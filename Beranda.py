@@ -8,7 +8,7 @@ from datetime import datetime
 # ==========================================
 st.set_page_config(
     page_title="Grow.TrackID - Beranda",
-    page_icon="🏠",
+    page_icon="Logo.png",
     layout="wide"
 )
 
