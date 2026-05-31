@@ -10,6 +10,7 @@ st.set_page_config(
     page_title="Grow.TrackID - Beranda",
     page_icon="Logo.png",
     layout="wide"
+)
 
 # Fungsi untuk koneksi ke Google Sheets menggunakan Streamlit Secrets
 def init_connection():
