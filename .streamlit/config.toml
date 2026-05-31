@@ -1,9 +1,13 @@
+[client]
+# Memaksa browser HP mengenali nama aplikasi Anda saat diinstal
+pageTitle = "growtrackID"
+
+[browser]
+# Menonaktifkan statistik kiriman telemetry ke server luar
+gatherUsageStats = false
+
 [theme]
 primaryColor = "#25D366"
 backgroundColor = "#FFFFFF"
 secondaryBackgroundColor = "#F0F2F6"
 textColor = "#31333F"
-
-[browser]
-# Memaksa server menampilkan judul kustom di browser & sistem Android PWA
-gatherUsageStats = false
