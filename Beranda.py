@@ -11,6 +11,20 @@ st.set_page_config(
     page_icon="Logo.png",
     layout="wide"
 )
+st.markdown(
+    f"""
+    <head>
+        <meta name="apple-mobile-web-app-title" content="growtrackID">
+        <meta name="application-name" content="growtrackID">
+        
+        <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/aflinbihar0-a11y/GrowTrackID/main/Logo.png">
+        
+        <link rel="icon" sizes="192x192" href="https://raw.githubusercontent.com/aflinbihar0-a11y/GrowTrackID/main/Logo.png">
+        <link rel="icon" sizes="512x512" href="https://raw.githubusercontent.com/aflinbihar0-a11y/GrowTrackID/main/Logo.png">
+    </head>
+    """,
+    unsafe_allow_html=True
+)
 
 # Fungsi untuk koneksi ke Google Sheets menggunakan Streamlit Secrets
 def init_connection():
