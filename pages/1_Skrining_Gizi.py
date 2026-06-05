@@ -5,7 +5,7 @@ import os
 
 st.set_page_config(page_title="Grow.TrackID", page_icon="🩺")
 
-st.title("🩺 Grow.TrackID")
+st.title("🩺 GENTALA - Skrining Gizi")
 st.write("Inovasi Program Puskesmas Batu Tangga")
 
 # --- SETUP PATH OTOMATIS ---
