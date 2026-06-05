@@ -57,7 +57,7 @@ from datetime import datetime
 # =========================================================================
 # 1. IDENTITAS & FILTER UTAMA (Selalu Muncul di Paling Atas)
 # =========================================================================
-st.title("GENTALA-SKRINING KESEHATAN MENTAL")
+st.title("GENTALA-Skrining Kesehatan Jiwa")
 st.caption("Aplikasi Deteksi Dini Kesehatan Mental Anak, Dewasa, & Ibu Pasca Melahirkan")
 
 # Pilihan kategori utama yang mencakup seluruh sasaran skrining
