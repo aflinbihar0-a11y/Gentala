@@ -57,13 +57,13 @@ from datetime import datetime
 # =========================================================================
 # 1. IDENTITAS & FILTER UTAMA (Selalu Muncul di Paling Atas)
 # =========================================================================
-st.title("SKRINING MENTAL")
-st.caption("Aplikasi Deteksi Dini Kesehatan Mental Anak, Dewasa, & Ibu Hamil")
+st.title("GENTALA-SKRINING KESEHATAN MENTAL")
+st.caption("Aplikasi Deteksi Dini Kesehatan Mental Anak, Dewasa, & Ibu Pasca Melahirkan")
 
 # Pilihan kategori utama yang mencakup seluruh sasaran skrining
 kategori = st.selectbox(
     "Pilih Kelompok Sasaran Skrining:",
-    ["Pasca Persalinan & Menyusui [EPDS]", "Anak & Remaja [SDQ]", "Orang Dewasa [SRQ-20]"],
+    ["Pasca Persalinan [EPDS]", "Anak & Remaja [SDQ]", "Orang Dewasa [SRQ-20]"],
     key="pilih_kategori_utama"
 )
 
