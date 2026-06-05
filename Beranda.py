@@ -51,7 +51,7 @@ else:
     st.error("Koneksi Gagal: Pastikan konfigurasi 'Secrets' di Streamlit Cloud sudah benar dan email robot (client_email) sudah diberi izin akses Editor di Google Sheets Anda.")
 
 st.markdown("""
-Aplikasi ini dirancang untuk memudahkan tenaga kesehatan dalam memantau pertumbuhan anak, melakukan skrining jiwa dari ibu hamil, anak-anak hingga dewasa, dan memudahkan konsultasi layanan kesehatan antar nakes dan dokter secara digital.
+Aplikasi ini dirancang untuk memudahkan tenaga kesehatan dalam skrining cepat status gizi anak (0-5 tahun), melakukan skrining jiwa dari ibu hamil, anak-anak hingga dewasa, dan memudahkan konsultasi layanan kesehatan antar nakes dan dokter secara digital.
 
 ### 👈 Silakan pilih menu di samping:
 1. **Skrining Gizi**: Untuk input data antropometri (BB/TB) dan cek status gizi anak secara otomatis.
