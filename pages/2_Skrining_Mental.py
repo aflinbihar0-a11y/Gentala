@@ -355,7 +355,7 @@ if "SRQ" in kategori or "Dewasa" in kategori:
         jawaban_srq[f"srq_{i+1}"] = st.radio(q, ["Tidak (T)", "Ya (Y)"], key=f"srq_q_{i+1}")
 
     # --- TOMBOL HITUNG DAN PEMROSESAN SKOR ---
-    if st.button("Hitung Skor SRQ-20 & Simpan Data", key="btn_srq"):
+    if st.button("Hitung Skor SRQ-20", key="btn_srq"):
         skor_total_srq = sum([1 if jawaban_srq[f"srq_{k}"] == "Ya (Y)" else 0 for k in range(1, 21)])
         ide_bunuh_diri = jawaban_srq["srq_17"] == "Ya (Y)"
         
