@@ -85,7 +85,7 @@ st.markdown("---")
 # KATEGORI: IBU HAMIL & MENYUSUI (EPDS)
 # =========================================================================
 if "EPDS" in kategori:
-    st.subheader("🤰 Skala Depresi Pascapersalinan Edinburgh (EPDS)")
+    st.subheader("🤰 Edinburgh Postnatal Depression Scale (EPDS)")
     st.info("Silakan memilih jawaban yang paling mirip dengan perasaan Anda selama 7 hari terakhir, tidak hanya perasaan Anda hari ini.")
     
     # --- FORM KUESIONER DENGAN OPSI SPESIFIK KEMENKES ---
@@ -101,7 +101,7 @@ if "EPDS" in kategori:
     epds_10 = st.radio("10. *Pikiran untuk menyakiti diri saya sendiri sering muncul:", ["a. Ya, agak sering", "b. Kadang-kadang", "c. Hampir tidak pernah", "d. Tidak pernah"], key="epds_10")
 
     # --- TOMBOL HITUNG DAN PEMROSESAN SKOR ---
-    if st.button("Hitung Skor EPDS & Simpan Data", key="btn_epds"):
+    if st.button("Hitung Skor EPDS", key="btn_epds"):
         
         # Kamus Konversi Nilai Berdasarkan Pilihan Huruf (a, b, c, d)
         skala_normal = {"a": 0, "b": 1, "c": 2, "d": 3}
