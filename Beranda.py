@@ -40,7 +40,7 @@ sheet = init_connection()
 # ==========================================
 # 2. TAMPILAN UTAMA (BERANDA)
 # ==========================================
-st.title("🏥 Selamat Datang di Grow.TrackID")
+st.title("🏥 Selamat Datang di GENTALA - Gerakan Terpadu Skrinig Gizi, Mental, & Telekonsultasi Anak")
 st.subheader("Inovasi Program Puskesmas Batu Tangga")
 
 # Informasi Status Koneksi di Sidebar
