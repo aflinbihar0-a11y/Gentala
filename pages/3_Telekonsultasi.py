@@ -28,7 +28,7 @@ sheet = init_connection()
 # ==========================================
 st.set_page_config(page_title="Synapse - Telemedicine", layout="wide")
 
-st.title("🩺 Fitur Telekonsultasi (Nakes - Dokter)")
+st.title("🩺GENTALA-Fitur Telekonsultasi (Nakes - Dokter)")
 
 # Inisialisasi status login di dalam session state agar tidak reset saat berinteraksi
 if "akses_diberikan" not in st.session_state:
