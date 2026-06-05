@@ -179,7 +179,7 @@ if "EPDS" in kategori:
 # KATEGORI: ANAK & REMAJA (SDQ)
 # =========================================================================
 if "SDQ" in kategori:
-    st.subheader("🧸 Kuesioner Kekuatan dan Kesulitan Anak (SDQ)")
+    st.subheader("🧸 Kuesioner SDQ (Strengths and Difficulties Questionnaire)")
     
     tipe_sdq = st.selectbox(
         "Pilih Versi Instrumen SDQ:",
@@ -245,7 +245,7 @@ if "SDQ" in kategori:
         q24 = st.radio("24. Banyak yang ditakuti, mudah menjadi takut (E5):", opsi_sdq, key="sdq_a24")
         q25 = st.radio("25. Memiliki perhatian yang baik terhadap apapun, mampu menyelesaikan tugas atau pekerjaan rumah sampai selesai (H5*):", opsi_sdq, key="sdq_a25")
 
-    if st.button("Hitung Skor Kesulitan Total & Simpan Data", key="btn_sdq"):
+    if st.button("Hitung Skor SDQ", key="btn_sdq"):
         skala_dasar = {"Tidak Benar": 0, "Agak Benar": 1, "Selalu Benar": 2}
         skala_terbalik = {"Tidak Benar": 2, "Agak Benar": 1, "Selalu Benar": 0}
 
