@@ -31,7 +31,7 @@ def ambil_data_database():
 st.set_page_config(page_title="Dashboard Surveilans", page_icon="📊", layout="wide")
 
 st.title("📊 Dashboard Pemantauan Wilayah")
-st.caption("Data Terintegrasi Aplikasi GENTALA & SINOVIAL — Puskesmas Batu Tangga, HST")
+st.caption("Data Terintegrasi Aplikasi GENTALA — Puskesmas Batu Tangga, HST")
 
 try:
     # Memuat data dari fungsi gspread
