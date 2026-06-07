@@ -72,7 +72,7 @@ def koneksi_spreadsheet_mental():
 # =========================================================================
 # 1. IDENTITAS & FILTER UTAMA
 # =========================================================================
-st.title("🧠 SINOVIAL - Skrining Kesehatan Jiwa")
+st.title("🧠 GENTALA - Skrining Kesehatan Jiwa")
 st.caption("Inovasi Program Integrasi - Puskesmas Batu Tangga")
 
 kategori = st.selectbox(
