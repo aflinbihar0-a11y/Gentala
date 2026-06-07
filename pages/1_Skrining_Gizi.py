@@ -17,6 +17,7 @@ with st.form("input_data"):
     st.markdown("### 📋 Form Input Data Pasien")
     nama = st.text_input("Nama Anak")
     jk = st.radio("Jenis Kelamin", ["Laki-laki", "Perempuan"])
+    st.markdown("*(Sesuai aturan Kemenkes, sisa hari tidak digenapkan ke atas. Contoh: 2 bulan 29 hari = 2 bulan)*")
     tgl_lahir = st.date_input("Tanggal Lahir", value=datetime.date(2024, 1, 1))
     tgl_periksa = st.date_input("Tanggal Pemeriksaan")
     tinggi = st.number_input("Tinggi/Panjang Badan (cm)", format="%.1f")
@@ -31,9 +32,22 @@ def hitung_zscore(nilai, median, sd_min1, sd_plus1):
         return (nilai - median) / (sd_plus1 - median)
 
 if submitted:
-    # Perhitungan umur bulat sesuai standar puskesmas (24 bulan tetap 24)
-    hari = (tgl_periksa - tgl_lahir).days
-    umur_bulan = round(hari / 30.44)
+    # --- PERBAIKAN LOGIKA UMUR BULAN PENUH (STANDAR KEMENKES) ---
+    # Langkah 1: Hitung selisih tahun dan bulan murni secara kalender
+    selisih_tahun = tgl_periksa.year - tgl_lahir.year
+    selisih_bulan = tgl_periksa.month - tgl_lahir.month
+    
+    # Langkah 2: Hitung total bulan sementara
+    umur_bulan = (selisih_tahun * 12) + selisih_bulan
+    
+    # Langkah 3: Koreksi sisa hari (Jika hari pemeriksaan < hari lahir, artinya belum genap 1 bulan penuh)
+    if tgl_periksa.day < tgl_lahir.day:
+        umur_bulan -= 1
+        
+    # Langkah 4: Batasi minimal 0 bulan (antisipasi salah input tanggal)
+    if umur_bulan < 0:
+        umur_bulan = 0
+        
     prefix = "Laki" if jk == "Laki-laki" else "Perempuan"
     
     try:
@@ -43,7 +57,7 @@ if submitted:
         
         st.divider()
         st.subheader(f"Hasil Analisis: {nama}")
-        st.info(f"Analisis berdasarkan Umur: {umur_bulan} Bulan")
+        st.info(f"Analisis berdasarkan Umur: {umur_bulan} Bulan (Standar Buku Antropometri Kemenkes)")
 
         # --- 1. ANALISIS BB/U ---
         data_bb = df_bb[df_bb['Umur (bulan)'] == umur_bulan]
