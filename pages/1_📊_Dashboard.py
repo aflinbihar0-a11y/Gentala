@@ -30,7 +30,7 @@ def ambil_data_database():
 # =========================================================================
 st.set_page_config(page_title="Dashboard Surveilans", page_icon="📊", layout="wide")
 
-st.title("📊 Dashboard Pemantauan Wilayah")
+st.title("📊 Dashboard Kunjungan")
 st.caption("Data Terintegrasi Aplikasi GENTALA — Puskesmas Batu Tangga, HST")
 
 try:
