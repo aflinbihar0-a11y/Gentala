@@ -1,19 +1,27 @@
 import streamlit as st
-import streamlit as st
+import datetime
+import os
+import gspread
+from google.oauth2.service_account import Credentials
 
+# Mengatur konfigurasi dasar halaman utama Streamlit
+st.set_page_config(page_title="SINOVIAL - Jiwa", page_icon="🧠", layout="centered")
+
+# =========================================================================
+# FUNGSI UTAMA: TOMBOL CETAK PDF (CSS MEDIA PRINT)
+# =========================================================================
 def tambahkan_tombol_cetak_pdf():
-    # 1. CSS Media Print (Tetap di st.markdown agar memengaruhi seluruh halaman utama)
     st.markdown(
         """
         <style>
         @media print {
-            /* Sembunyikan sidebar, header, footer, dan area tombol iframe saat cetak */
-            [data-testid="stSidebar"], header, footer, .element-container:has(iframe) {
+            /* Sembunyikan elemen navigasi Streamlit saat masuk mode print/PDF */
+            [data-testid="stSidebar"], header, footer, .element-container:has(iframe), .stButton {
                 display: none !important;
             }
             .main .block-container {
-                padding-top: 1rem !important;
-                padding-bottom: 1rem !important;
+                padding-top: 0.5rem !important;
+                padding-bottom: 0.5rem !important;
             }
         }
         </style>
@@ -21,13 +29,11 @@ def tambahkan_tombol_cetak_pdf():
         unsafe_allow_html=True
     )
     
-    # 2. Bungkus tombol HTML ke dalam iframe Streamlit menggunakan st.components.v1.html
-    # Gunakan window.parent.print() agar yang dicetak adalah halaman utama, bukan isi iframe saja.
     tombol_html = """
     <style>
         .btn-print {
             width: 100%;
-            background-color: #1E3A8A; /* Warna biru gelap sesuai tema aplikasi Anda */
+            background-color: #1E3A8A;
             color: white;
             padding: 12px 24px;
             font-size: 16px;
@@ -39,35 +45,43 @@ def tambahkan_tombol_cetak_pdf():
             align-items: center;
             justify-content: center;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
         .btn-print:hover {
-            background-color: #152A66; /* Efek sedikit menggelap saat cursor di atas tombol */
+            background-color: #152A66;
         }
     </style>
     <button class="btn-print" onclick="window.parent.print()">
         🖨️ Cetak Hasil Skrining / Simpan ke PDF
     </button>
     """
-    
-    # Render menggunakan komponen HTML resmi Streamlit
     st.components.v1.html(tombol_html, height=55)
-from datetime import datetime
 
 # =========================================================================
-# 1. IDENTITAS & FILTER UTAMA (Selalu Muncul di Paling Atas)
+# FUNGSI DATABASE: KONEKSI TAB SHEET_MENTAL_HEALTH
 # =========================================================================
-st.title("GENTALA-Skrining Kesehatan Jiwa")
-st.caption("Aplikasi Deteksi Dini Kesehatan Mental Anak, Dewasa, & Ibu Pasca Melahirkan")
+def koneksi_spreadsheet_mental():
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds_dict = st.secrets["gcp_service_account"] 
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+    client = gspread.authorize(creds)
+    # Membuka file utama dan mengunci spesifik ke tab Sheet_Mental_Health
+    sheet = client.open("GrowTrack Database").worksheet("Sheet_Mental_Health")
+    return sheet
 
-# Pilihan kategori utama yang mencakup seluruh sasaran skrining
+# =========================================================================
+# 1. IDENTITAS & FILTER UTAMA
+# =========================================================================
+st.title("🧠 SINOVIAL - Skrining Kesehatan Jiwa")
+st.caption("Inovasi Program Integrasi - Puskesmas Batu Tangga")
+
 kategori = st.selectbox(
     "Pilih Kelompok Sasaran Skrining:",
     ["Pasca Persalinan [EPDS]", "Anak & Remaja [SDQ]", "Orang Dewasa [SRQ-20]"],
     key="pilih_kategori_utama"
 )
 
-st.markdown("### 📋 Data Identitas")
+st.markdown("### 📋 Data Identitas Pasien")
 col_id1, col_id2 = st.columns(2)
 
 with col_id1:
@@ -75,20 +89,22 @@ with col_id1:
     nik = st.text_input("Nomor NIK / No. RM:", key="id_nik")
 
 with col_id2:
-    tgl_lahir = st.date_input("Tanggal Lahir:", value=datetime(2000, 1, 1), key="id_tgl")
+    tgl_lahir = st.date_input("Tanggal Lahir:", value=datetime.date(2000, 1, 1), key="id_tgl")
     pemeriksa = st.text_input("Nama Tenaga Kesehatan / Kader:", key="id_nakes")
 
 st.markdown("---")
 
+# Initialize shared upload variables
+sudah_submit = False
+baris_data_cloud = []
 
 # =========================================================================
-# KATEGORI: IBU HAMIL & MENYUSUI (EPDS)
+# 2. MODUL KUESIONER IBU HAMIL & MENYUSUI (EPDS)
 # =========================================================================
 if "EPDS" in kategori:
     st.subheader("🤰 Edinburgh Postnatal Depression Scale (EPDS)")
-    st.info("Silakan memilih jawaban yang paling mirip dengan perasaan Anda selama 7 hari terakhir, tidak hanya perasaan Anda hari ini.")
+    st.info("Silakan memilih jawaban yang paling mirip dengan perasaan Anda selama 7 hari terakhir.")
     
-    # --- FORM KUESIONER DENGAN OPSI SPESIFIK KEMENKES ---
     epds_1 = st.radio("1. Saya dapat tertawa dan melihat segi kelucuan hal-hal tertentu:", ["a. Seperti biasanya", "b. Sekarang tidak terlalu sering", "c. Sekarang agak jarang", "d. Tidak sama sekali"], key="epds_1")
     epds_2 = st.radio("2. Saya menanti-nanti untuk melakukan sesuatu dengan penuh harapan:", ["a. Sebanyak sebelumnya", "b. Agak sedikit kurang dibandingkan dengan sebelumnya", "c. Kurang dibandingkan dengan sebelumnya", "d. Tidak pernah sama sekali"], key="epds_2")
     epds_3 = st.radio("3. *Saya menyalahkan diri jika ada sesuatu yang tidak berjalan dengan baik:", ["a. Ya, hampir selalu", "b. Ya, kadang-kadang", "c. Tidak terlalu sering", "d. Tidak, tidak pernah"], key="epds_3")
@@ -100,97 +116,54 @@ if "EPDS" in kategori:
     epds_9 = st.radio("9. *Saya merasa sangat sedih sehingga saya menangis:", ["a. Ya, hampir selalu", "b. Ya, sering", "c. Hanya sekali-kali", "d. Tidak pernah"], key="epds_9")
     epds_10 = st.radio("10. *Pikiran untuk menyakiti diri saya sendiri sering muncul:", ["a. Ya, agak sering", "b. Kadang-kadang", "c. Hampir tidak pernah", "d. Tidak pernah"], key="epds_10")
 
-    # --- TOMBOL HITUNG DAN PEMROSESAN SKOR ---
-    if st.button("Hitung Skor EPDS", key="btn_epds"):
-        
-        # Kamus Konversi Nilai Berdasarkan Pilihan Huruf (a, b, c, d)
+    if st.button("Hitung & Simpan Skor EPDS", key="btn_epds"):
         skala_normal = {"a": 0, "b": 1, "c": 2, "d": 3}
         skala_terbalik = {"a": 3, "b": 2, "c": 1, "d": 0}
         
-        # Ekstraksi nilai skor menggunakan huruf pertama string pilihan jawaban
-        skor_1 = skala_normal[epds_1[0]]
-        skor_2 = skala_normal[epds_2[0]]
-        skor_3 = skala_terbalik[epds_3[0]]
-        skor_4 = skala_normal[epds_4[0]]
-        skor_5 = skala_terbalik[epds_5[0]]
-        skor_6 = skala_terbalik[epds_6[0]]
-        skor_7 = skala_terbalik[epds_7[0]]
-        skor_8 = skala_terbalik[epds_8[0]]
-        skor_9 = skala_terbalik[epds_9[0]]
-        skor_10 = skala_terbalik[epds_10[0]]
+        skor_total = (skala_normal[epds_1[0]] + skala_normal[epds_2[0]] + skala_terbalik[epds_3[0]] + 
+                      skala_normal[epds_4[0]] + skala_terbalik[epds_5[0]] + skala_terbalik[epds_6[0]] + 
+                      skala_terbalik[epds_7[0]] + skala_terbalik[epds_8[0]] + skala_terbalik[epds_9[0]] + 
+                      skala_terbalik[epds_10[0]])
         
-        skor_total_epds = skor_1 + skor_2 + skor_3 + skor_4 + skor_5 + skor_6 + skor_7 + skor_8 + skor_9 + skor_10
-        
-        # --- LOGIKA INTERPRETASI 3 TIER SESUAI SLIDE (image_d43ddb.jpg) ---
-        if skor_total_epds <= 9:
-            status_epds = "Indikasi risiko rendah depresi"
-            pesan_klinis = "Kondisi emosional ibu cenderung stabil. Tetap berikan dukungan psikososial dasar."
-            warna_status = "success"
-        elif 10 <= skor_total_epds <= 12:
-            status_epds = "Risiko sedang; perlu pemantauan lebih lanjut"
-            pesan_klinis = "Ibu menunjukkan gejala distres emosional sedang. Lakukan evaluasi ulang/pendampingan berkala oleh nakes."
-            warna_status = "warning"
-        else: # Skor >= 13
-            status_epds = "Risiko tinggi depresi; disarankan konsultasi dengan profesional kesehatan mental"
-            pesan_klinis = "Gejala mengarah kuat pada depresi perinatal. Segera rujuk atau konsultasikan dengan profesional kesehatan jiwa."
-            warna_status = "error"
-        
-        # --- PRESENTASI ANTARMUKA MEDIS ---
-        st.markdown("### 📊 Hasil Skoring Klasifikasi EPDS")
-        st.metric(label="Skor Total Capaian", value=f"{skor_total_epds} / 30")
-        
-        # Visualisasi status dinamis menggunakan komponen bawaan streamlit
-        if warna_status == "success":
-            st.success(f"**Status:** {status_epds}")
-        elif warna_status == "warning":
-            st.warning(f"**Status:** {status_epds}")
+        if skor_total <= 9:
+            status_mental = "Risiko rendah depresi"
+            rekomendasi = "Kondisi emosional stabil. Tetap berikan dukungan psikososial dasar."
+            st.success(f"**Status:** {status_mental}")
+        elif 10 <= skor_total <= 12:
+            status_mental = "Risiko sedang (Distres emosional)"
+            rekomendasi = "Perlu pemantauan lebih lanjut. Lakukan evaluasi ulang/pendampingan berkala oleh nakes."
+            st.warning(f"**Status:** {status_mental}")
         else:
-            st.error(f"**Status:** {status_epds}")
+            status_mental = "Risiko tinggi depresi"
+            rekomendasi = "Gejala mengarah kuat pada depresi perinatal. Segera rujuk ke profesional kesehatan jiwa."
+            st.error(f"**Status:** {status_mental}")
             
-        st.info(f"💡 **Rekomendasi Tindakan:** {pesan_klinis}")
-        st.caption("ℹ️ *Catatan Penting: Skor tinggi tidak berarti diagnosis pasti depresi, tetapi menunjukkan perlunya evaluasi lebih lanjut.*")
+        st.metric(label="SKOR TOTAL EPDS", value=f"{skor_total} / 30")
+        st.info(f"💡 **Rekomendasi Tindakan:** {rekomendasi}")
         
-        # Peringatan Keamanan Kritis Tambahan (Proteksi Pertanyaan Nomor 10)
-        if skor_10 > 0:
-            st.markdown("---")
-            st.error("🚨 **ALARM UTAMA KLINIS (IDE CEDERA DIRI):**")
-            st.markdown("Ibu memilih opsi yang mengindikasikan adanya pikiran untuk menyakiti diri sendiri pada nomor 10. **Tatalaksana pendampingan psikologis atau rujukan darurat wajib berjalan segera**, tanpa harus menunggu akumulasi skor total!")
-
-        # --- ARSIP DATABASE CLOUD ---
-        if 'sheet' in globals() or 'sheet' in locals():
-            try:
-                sheet.append_row([
-                    str(datetime.now().strftime('%Y-%m-%d %H:%M')), 
-                    nama, nik, str(tgl_lahir), 
-                    f"EPDS - Skor: {skor_total_epds} ({status_epds})", 
-                    skor_total_epds, status_epds, pemeriksa
-                ])
-                if warna_status == "success":
-                    st.balloons()
-            except:
-                pass
-
-        # 🖨️ MENAMPILKAN TOMBOL CETAK PDF UNTUK EPDS
-        st.markdown("---")
-        tambahkan_tombol_cetak_pdf()
-
+        # Red-flag safety check pertanyaan no 10
+        flag_danger = "Ada" if skala_terbalik[epds_10[0]] > 0 else "Tidak Ada"
+        if flag_danger == "Ada":
+            st.error("🚨 **ALARM UTAMA KLINIS (IDE CEDERA DIRI):** Pasien mengindikasikan pikiran menyakiti diri sendiri! Tatalaksana psikologis/rujukan darurat wajib berjalan segera!")
+            
+        # Mapping 12 Kolom standar database
+        baris_data_cloud = [
+            str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+            nama, f"NIK/RM: {nik}", "EPDS (Ibu Perinatal)", skor_total, "-", status_mental, rekomendasi, "Ibu Hamil/Menyusui", flag_danger, pemeriksa, "-"
+        ]
+        sudah_submit = True
 
 # =========================================================================
-# KATEGORI: ANAK & REMAJA (SDQ)
+# 3. MODUL KUESIONER ANAK & REMAJA (SDQ)
 # =========================================================================
-if "SDQ" in kategori:
+elif "SDQ" in kategori:
     st.subheader("🧸 Kuesioner SDQ (Strengths and Difficulties Questionnaire)")
-    
-    tipe_sdq = st.selectbox(
-        "Pilih Versi Instrumen SDQ:",
-        ["SDQ Anak (Usia 4-10 Tahun / Parent-Report)", "SDQ Remaja (Usia 11-17 Tahun / Self-Report)"],
-        key="pilih_versi_sdq"
-    )
-    
+    tipe_sdq = st.selectbox("Pilih Versi Instrumen SDQ:", ["SDQ Anak (Usia 4-10 Tahun / Parent-Report)", "SDQ Remaja (Usia 11-17 Tahun / Self-Report)"], key="pilih_versi_sdq")
     opsi_sdq = ["Tidak Benar", "Agak Benar", "Selalu Benar"]
     
+    # Render pertanyaan (Gunakan form radio button terpusat)
     if "Remaja" in tipe_sdq:
-        st.info("Bahasanya telah disesuaikan menggunakan sudut pandang remaja (Self-Report).")
+        st.info("Sudut pandang Remaja (Self-Report)")
         q1 = st.radio("1. Aku berusaha bersikap baik kepada orang lain. Aku peduli dengan perasaan mereka (Pr1):", opsi_sdq, key="sdq_r1")
         q2 = st.radio("2. Aku gelisah, aku tidak dapat duduk diam untuk waktu lama (H1):", opsi_sdq, key="sdq_r2")
         q3 = st.radio("3. Aku sering mengeluh sakit kepala, sakit perut atau sakit-sakit lainnya (E1):", opsi_sdq, key="sdq_r3")
@@ -216,9 +189,8 @@ if "SDQ" in kategori:
         q23 = st.radio("23. Aku merasa lebih mudah berteman dengan orang dewasa daripada dengan anak-anak sebayaku (P5):", opsi_sdq, key="sdq_r23")
         q24 = st.radio("24. Banyak hal yang aku takuti, aku mudah menjadi takut (E5):", opsi_sdq, key="sdq_r24")
         q25 = st.radio("25. Aku memiliki perhatian yang baik terhadap tugas-tugas dan mampu menyelesaikannya hingga selesai (H5*):", opsi_sdq, key="sdq_r25")
-
     else:
-        st.info("Bahasanya menggunakan sudut pandang orang tua/pengasuh (Parent-Report).")
+        st.info("Sudut pandang Orang Tua/Pengasuh (Parent-Report)")
         q1 = st.radio("1. Dapat memperdulikan perasaan orang lain (Pr1):", opsi_sdq, key="sdq_a1")
         q2 = st.radio("2. Gelisah, anak tidak dapat diam untuk waktu lama (H1):", opsi_sdq, key="sdq_a2")
         q3 = st.radio("3. Sering mengeluh sakit kepala, sakit perut atau sakit-sakit lainnya (E1):", opsi_sdq, key="sdq_a3")
@@ -241,167 +213,123 @@ if "SDQ" in kategori:
         q20 = st.radio("20. Sering menawarkan diri untuk membantu orang lain (orangtua, guru, anak-anak lain) (Pr5):", opsi_sdq, key="sdq_a20")
         q21 = st.radio("21. Sebelum melakukan sesuatu ia berpikir dahulu tentang akibatnya (H4*):", opsi_sdq, key="sdq_a21")
         q22 = st.radio("22. Mencuri dari rumah, sekolah, atau tempat lain (C5):", opsi_sdq, key="sdq_a22")
-        q23 = st.radio("23. Lebih mudah berteman dengan anak-anak lain daripada dengan anak-anak lain (P5):", opsi_sdq, key="sdq_a23")
+        q23 = st.radio("23. Lebih mudah berteman dengan anak-anak lain daripada dengan orang dewasa (P5):", opsi_sdq, key="sdq_a23")
         q24 = st.radio("24. Banyak yang ditakuti, mudah menjadi takut (E5):", opsi_sdq, key="sdq_a24")
         q25 = st.radio("25. Memiliki perhatian yang baik terhadap apapun, mampu menyelesaikan tugas atau pekerjaan rumah sampai selesai (H5*):", opsi_sdq, key="sdq_a25")
 
-    if st.button("Hitung Skor SDQ", key="btn_sdq"):
+    if st.button("Hitung & Simpan Skor SDQ", key="btn_sdq"):
         skala_dasar = {"Tidak Benar": 0, "Agak Benar": 1, "Selalu Benar": 2}
         skala_terbalik = {"Tidak Benar": 2, "Agak Benar": 1, "Selalu Benar": 0}
 
-        # 1. Identifikasi Rumus Pengambilan Nilai Parameter Sesuai Kunci Ringkas Kemenkes
         skor_emosi = skala_dasar[q3] + skala_dasar[q8] + skala_dasar[q13] + skala_dasar[q16] + skala_dasar[q24]
         skor_perilaku = skala_dasar[q5] + skala_terbalik[q7] + skala_dasar[q12] + skala_dasar[q18] + skala_dasar[q22]
         skor_hiper = skala_dasar[q2] + skala_dasar[q10] + skala_dasar[q15] + skala_terbalik[q21] + skala_terbalik[q25]
         skor_sebaya = skala_dasar[q6] + skala_terbalik[q11] + skala_terbalik[q14] + skala_dasar[q19] + skala_dasar[q23]
         skor_prososial = skala_dasar[q1] + skala_dasar[q4] + skala_dasar[q9] + skala_dasar[q17] + skala_dasar[q20]
         
-        total_kesulitan = skor_emosi + skor_perilaku + skor_hiper + skor_sebaya
+        skor_total = skor_emosi + skor_perilaku + skor_hiper + skor_sebaya
 
-        # 2. PROSES INTERPRETASI ADAPTIF BERDASARKAN TABEL KEMENKES (image_d53545.png)
         if "Remaja" in tipe_sdq:
-            status_kesulitan = "Normal" if total_kesulitan <= 15 else ("Borderline" if total_kesulitan <= 19 else "Abnormal")
-            status_emosi = "Normal" if skor_emosi <= 5 else ("Borderline" if skor_emosi == 6 else "Abnormal")
-            status_perilaku = "Normal" if skor_perilaku <= 3 else ("Borderline" if skor_perilaku == 4 else "Abnormal")
-            status_hiper = "Normal" if skor_hiper <= 5 else ("Borderline" if skor_hiper == 6 else "Abnormal")
-            status_sebaya = "Normal" if skor_sebaya <= 3 else ("Borderline" if skor_sebaya in [4, 5] else "Abnormal")
+            status_mental = "Normal" if skor_total <= 15 else ("Borderline" if skor_total <= 19 else "Abnormal")
         else:
-            status_kesulitan = "Normal" if total_kesulitan <= 13 else ("Borderline" if total_kesulitan <= 16 else "Abnormal")
-            status_emosi = "Normal" if skor_emosi <= 3 else ("Borderline" if skor_emosi == 4 else "Abnormal")
-            status_perilaku = "Normal" if skor_perilaku <= 2 else ("Borderline" if skor_perilaku == 3 else "Abnormal")
-            status_hiper = "Normal" if skor_hiper <= 5 else ("Borderline" if skor_hiper == 6 else "Abnormal")
-            status_sebaya = "Normal" if skor_sebaya <= 2 else ("Borderline" if skor_sebaya == 3 else "Abnormal")
+            status_mental = "Normal" if skor_total <= 13 else ("Borderline" if skor_total <= 16 else "Abnormal")
+            
+        rekomendasi = "Edukasi kesehatan mental anak & evaluasi rutin." if status_mental == "Normal" else ("Jadwalkan skrining ulang & edukasi pola asuh." if status_mental == "Borderline" else "Rujuk ke poli tumbuh kembang anak / psikolog.")
+        detail_sub = f"E:{skor_emosi}, P:{skor_perilaku}, H:{skor_hiper}, S:{skor_sebaya}, Pr:{skor_prososial}"
         
-        status_prososial = "Normal" if skor_prososial >= 6 else ("Borderline" if skor_prososial == 5 else "Abnormal")
-
-        # 3. DISPLAY PRESENTASI MEDIS YANG COMPREHENSIVE
+        # Tampilkan Hasil Presentasi Medis di Layar
         st.markdown("### 📊 Hasil Interpretasi")
-        
         col_m1, col_m2 = st.columns(2)
         with col_m1:
-            st.metric(label="SKOR TOTAL KESULITAN", value=f"{total_kesulitan} / 40")
-            if status_kesulitan == "Normal":
-                st.success(f"Klasifikasi: **{status_kesulitan}**")
-            elif status_kesulitan == "Borderline":
-                st.warning(f"Klasifikasi: **{status_kesulitan}**")
-            else:
-                st.error(f"Klasifikasi: **{status_kesulitan}**")
-                
+            st.metric(label="SKOR TOTAL KESULITAN", value=f"{skor_total} / 40")
+            if status_mental == "Normal": st.success(f"Klasifikasi: **{status_mental}**")
+            elif status_mental == "Borderline": st.warning(f"Klasifikasi: **{status_mental}**")
+            else: st.error(f"Klasifikasi: **{status_mental}**")
         with col_m2:
             st.metric(label="SKOR PROSOSIAL (KEKUATAN)", value=f"{skor_prososial} / 10")
-            st.info(f"Klasifikasi: **{status_prososial}**")
-            
-        st.markdown("#### 🔍 Breakdown Subskala Masalah Klinis:")
+            st.info(f"Subskala Kekuatan: {status_mental}")
+
         st.markdown(f"""
-        | Subskala Analisis | Skor Capaian | Status Interpretasi |
-        | :--- | :---: | :--- |
-        | 🧠 **Gejala Emosional (E)** | {skor_emosi} / 10 | {status_emosi} |
-        | 🚸 **Masalah Perilaku (C)** | {skor_perilaku} / 10 | {status_perilaku} |
-        | ⚡ **Hiperaktivitas/Inatensi (H)** | {skor_hiper} / 10 | {status_hiper} |
-        | 👥 **Masalah Teman Sebaya (P)** | {skor_sebaya} / 10 | {status_sebaya} |
+        | Subskala Analisis | Skor Capaian |
+        | :--- | :---: |
+        | 🧠 **Gejala Emosional (E)** | {skor_emosi} / 10 |
+        | 🚸 **Masalah Perilaku (C)** | {skor_perilaku} / 10 |
+        | ⚡ **Hiperaktivitas/Inatensi (H)** | {skor_hiper} / 10 |
+        | 👥 **Masalah Teman Sebaya (P)** | {skor_sebaya} / 10 |
         """)
-
-        # 4. MODUL DATABASE CLOUD
-        if 'sheet' in globals() or 'sheet' in locals():
-            try:
-                sheet.append_row([
-                    str(datetime.now().strftime('%Y-%m-%d %H:%M')), 
-                    nama, nik, str(tgl_lahir), 
-                    f"{tipe_sdq} - Total Kesulitan: {total_kesulitan} ({status_kesulitan})", 
-                    total_kesulitan, status_kesulitan, pemeriksa
-                ])
-                st.balloons()
-                st.success("Data Skrining Berhasil Diarsipkan Sesuai Standar Kemenkes!")
-            except:
-                pass
-
-        # 🖨️ MENAMPILKAN TOMBOL CETAK PDF UNTUK SDQ
-        st.markdown("---")
-        tambahkan_tombol_cetak_pdf()
-
+        
+        # Mapping 12 Kolom standar database
+        baris_data_cloud = [
+            str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+            nama, f"NIK/RM: {nik}", tipe_sdq, skor_total, detail_sub, status_mental, rekomendasi, "Anak/Remaja", "-", pemeriksa, "-"
+        ]
+        sudah_submit = True
 
 # =========================================================================
-# KATEGORI: ORANG DEWASA / UMUM (SRQ-20)
+# 4. MODUL KUESIONER ORANG DEWASA / UMUM (SRQ-20)
 # =========================================================================
-if "SRQ" in kategori or "Dewasa" in kategori:
+else:
     st.subheader("📋 Self Reporting Questionnaire (SRQ-20)")
-    st.info("Bacalah petunjuk ini seluruhnya sebelum mulai mengisi. Pertanyaan berikut berhubungan dengan masalah yang mungkin mengganggu Anda selama 30 hari terakhir.")
+    st.info("Pertanyaan berikut berhubungan dengan masalah yang mungkin mengganggu Anda selama 30 hari terakhir.")
     
     pertanyaan_srq = [
-        "1. Apakah Anda sering merasa sakit kepala?",
-        "2. Apakah Anda kehilangan nafsu makan?",
-        "3. Apakah tidur Anda tidak nyenyak?",
-        "4. Apakah Anda mudah merasa takut?",
-        "5. Apakah Anda merasa cemas, tegang, atau khawatir?",
-        "6. Apakah tangan Anda gemetar?",
-        "7. Apakah Anda mengalami gangguan pencernaan?",
-        "8. Apakah Anda merasa sulit berpikir jernih?",
-        "9. Apakah Anda merasa tidak bahagia?",
-        "10. Apakah Anda lebih sering menangis?",
-        "11. Apakah Anda merasa sulit untuk menikmati aktivitas sehari-hari?",
-        "12. Apakah Anda mengalami kesulitan untuk mengambil keputusan?",
-        "13. Apakah aktivitas/tugas sehari-hari Anda terbengkalai?",
-        "14. Apakah Anda merasa tidak mampu berperan dalam kehidupan ini?",
-        "15. Apakah Anda kehilangan minat terhadap banyak hal?",
-        "16. Apakah Anda merasa tidak berharga?",
-        "17. Apakah Anda mempunyai pikiran untuk mengakhiri hidup Anda?",
-        "18. Apakah Anda merasa lelah sepanjang waktu?",
-        "19. Apakah Anda merasa tidak enak di perut?",
-        "20. Apakah Anda mudah lelah?"
+        "1. Apakah Anda sering merasa sakit kepala?", "2. Apakah Anda kehilangan nafsu makan?", "3. Apakah tidur Anda tidak nyenyak?",
+        "4. Apakah Anda mudah merasa takut?", "5. Apakah Anda merasa cemas, tegang, atau khawatir?", "6. Apakah tangan Anda gemetar?",
+        "7. Apakah Anda mengalami gangguan pencernaan?", "8. Apakah Anda merasa sulit berpikir jernih?", "9. Apakah Anda merasa tidak bahagia?",
+        "10. Apakah Anda lebih sering menangis?", "11. Apakah Anda merasa sulit untuk menikmati aktivitas sehari-hari?",
+        "12. Apakah Anda mengalami kesulitan untuk mengambil keputusan?", "13. Apakah aktivitas/tugas sehari-hari Anda terbengkalai?",
+        "14. Apakah Anda merasa tidak mampu berperan dalam kehidupan ini?", "15. Apakah Anda kehilangan minat terhadap banyak hal?",
+        "16. Apakah Anda merasa tidak berharga?", "17. Apakah Andamempunyai pikiran untuk mengakhiri hidup Anda?",
+        "18. Apakah Anda merasa lelah sepanjang waktu?", "19. Apakah Anda merasa tidak enak di perut?", "20. Apakah Anda mudah lelah?"
     ]
     
     jawaban_srq = {}
     for i, q in enumerate(pertanyaan_srq):
         jawaban_srq[f"srq_{i+1}"] = st.radio(q, ["Tidak (T)", "Ya (Y)"], key=f"srq_q_{i+1}")
 
-    # --- TOMBOL HITUNG DAN PEMROSESAN SKOR ---
-    if st.button("Hitung Skor SRQ-20", key="btn_srq"):
-        skor_total_srq = sum([1 if jawaban_srq[f"srq_{k}"] == "Ya (Y)" else 0 for k in range(1, 21)])
-        ide_bunuh_diri = jawaban_srq["srq_17"] == "Ya (Y)"
+    if st.button("Hitung & Simpan Skor SRQ-20", key="btn_srq"):
+        skor_total = sum([1 if jawaban_srq[f"srq_{k}"] == "Ya (Y)" else 0 for k in range(1, 21)])
+        ide_bunuh_diri = "Ada" if jawaban_srq["srq_17"] == "Ya (Y)" else "Tidak Ada"
         
-        # --- LOGIKA INTERPRETASI ADAPTIF SESUAI SLIDE (image_c889ff.png) ---
-        if ide_bunuh_diri:
-            status_srq = "Indikasi Mengalami Masalah Kesehatan Jiwa (Kritis - Nomor 17 YA)"
-            warna_status = "error"
-            rekomendasi = "Terdapat ide mengakhiri hidup (Nomor 17). Sesuai panduan resmi, meskipun skor total < 6, pasien TETAP memerlukan pemeriksaan lanjutan wawancara psikiatrik secara segera."
-        elif skor_total_srq >= 6:
-            status_srq = "Indikasi Mengalami Masalah Kesehatan Jiwa"
-            warna_status = "error"
-            rekomendasi = "Skor total mencapai ambang batas (>= 6). Memerlukan pemeriksaan lanjutan wawancara psikiatrik untuk mengetahui ada atau tidaknya gangguan jiwa."
+        if ide_bunuh_diri == "Ada":
+            status_mental = "Indikasi Masalah Jiwa (Kritis - No 17 YA)"
+            rekomendasi = "Terdapat ide mengakhiri hidup. Wajib segera lakukan pemeriksaan lanjutan wawancara psikiatrik dan pendampingan ketat."
+            st.error(f"**Status:** {status_mental}")
+        elif skor_total >= 6:
+            status_mental = "Indikasi Masalah Kesehatan Jiwa"
+            rekomendasi = "Skor total ≥ 6. Pasien memerlukan pemeriksaan lanjutan wawancara psikiatrik di Puskesmas."
+            st.error(f"**Status:** {status_mental}")
         else:
-            status_srq = "Normal / Sehat Jiwa"
-            warna_status = "success"
-            rekomendasi = "Hasil skrining berada di bawah ambang batas kritis dan tidak ada indikasi ide cedera diri. Tetap berikan edukasi perawatan kesehatan mental mandiri."
-
-        # --- PRESENTASI ANTARMUKA MEDIS ---
-        st.markdown("### 📊 Hasil Skoring Resmi Kemenkes RI")
-        st.metric(label="Skor Total Jawaban 'Ya'", value=f"{skor_total_srq} / 20")
-        
-        if warna_status == "error":
-            st.error(f"**Status Interpretasi:** {status_srq}")
-        else:
-            st.success(f"**Status Interpretasi:** {status_srq}")
+            status_mental = "Normal / Sehat Jiwa"
+            rekomendasi = "Hasil skrining normal. Berikan edukasi perawatan kesehatan mental mandiri."
+            st.success(f"**Status:** {status_mental}")
             
-        st.info(f"💡 **Rekomendasi Tindakan Lanjutan:** {rekomendasi}")
+        st.metric(label="SKOR JAWABAN 'YA'", value=f"{skor_total} / 20")
+        st.info(f"💡 **Rekomendasi Tindakan:** {rekomendasi}")
         
-        if ide_bunuh_diri:
-            st.markdown("---")
-            st.warning("🚨 **ALARM UTAMA (CRITICAL RED FLAG):** Segera lakukan pendampingan ketat dan koordinasikan alur rujukan sekunder. Jangan biarkan pasien tanpa pengawasan nakes.")
+        if ide_bunuh_diri == "Ada":
+            st.warning("🚨 **CRITICAL RED FLAG:** Jangan biarkan pasien pulang tanpa pengawasan keluarga dan nakes!")
+            
+        # Mapping 12 Kolom standar database
+        baris_data_cloud = [
+            str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+            nama, f"NIK/RM: {nik}", "SRQ-20 (Dewasa)", skor_total, "-", status_mental, rekomendasi, "Dewasa Umum", ide_bunuh_diri, pemeriksa, "-"
+        ]
+        sudah_submit = True
 
-        # --- ARSIP DATABASE CLOUD ---
-        if 'sheet' in globals() or 'sheet' in locals():
-            try:
-                sheet.append_row([
-                    str(datetime.now().strftime('%Y-%m-%d %H:%M')), 
-                    nama, nik, str(tgl_lahir), 
-                    f"SRQ-20 - Skor: {skor_total_srq} ({status_srq})", 
-                    skor_total_srq, status_srq, pemeriksa
-                ])
-                if warna_status == "success":
-                    st.balloons()
-            except:
-                pass
-
-        # 🖨️ MENAMPILKAN TOMBOL CETAK PDF UNTUK SRQ-20
-        st.markdown("---")
-        tambahkan_tombol_cetak_pdf()
+# =========================================================================
+# 5. AKSI EKSEKUSI: PENGIRIMAN DATA CLOUD & TOMBOL PDF
+# =========================================================================
+if sudah_submit:
+    with st.spinner("Sedang merekam hasil skrining ke database Google Sheets..."):
+        try:
+            sheet_mental = koneksi_spreadsheet_mental()
+            sheet_mental.append_row(baris_data_cloud)
+            st.balloons()
+            st.success("✅ Seluruh data skrining kesehatan mental berhasil disimpan ke tab 'Sheet_Mental_Health'!")
+        except Exception as e:
+            st.error(f"⚠️ Gagal mengirim data ke Google Sheets. Periksa konfigurasi st.secrets Anda. Error: {e}")
+            
+    # Menampilkan tombol print PDF secara elegan tepat setelah proses kalkulasi & simpan sukses
+    st.markdown("---")
+    tambahkan_tombol_cetak_pdf()
