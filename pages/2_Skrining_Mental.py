@@ -5,7 +5,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # Mengatur konfigurasi dasar halaman utama Streamlit
-st.set_page_config(page_title="SINOVIAL - Jiwa", page_icon="🧠", layout="centered")
+st.set_page_config(page_title="GENTALA - Jiwa", page_icon="🧠", layout="centered")
 
 # =========================================================================
 # FUNGSI UTAMA: TOMBOL CETAK PDF (CSS MEDIA PRINT)
