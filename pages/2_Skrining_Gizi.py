@@ -141,7 +141,7 @@ if submitted:
                 sheet = koneksi_spreadsheet()
                 baris_baru = [
                     str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
-                    nama, jk, str(tgl_lahir), str(tgl_periksa), umur_bulan, tinggi, berat,
+                    nama, alamat_pasien, jk, str(tgl_lahir), str(tgl_periksa), umur_bulan, tinggi, berat,
                     f"{z_bb:.2f}", status_bbu, f"{z_tb:.2f}", status_tbu, f"{z_w:.2f}", status_bbtb
                 ]
                 sheet.append_row(baris_baru)
