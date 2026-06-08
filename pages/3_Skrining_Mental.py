@@ -92,6 +92,21 @@ with col_id2:
     tgl_lahir = st.date_input("Tanggal Lahir:", value=datetime.date(2000, 1, 1), key="id_tgl")
     pemeriksa = st.text_input("Nama Tenaga Kesehatan / Kader:", key="id_nakes")
 
+# 🎯 LOGIKA OTOMATIS: Menghitung Umur Pasien Berdasarkan Tanggal Lahir (Mencegah NameError)
+hari_ini = datetime.date.today()
+hitung_umur = hari_ini.year - tgl_lahir.year - ((hari_ini.month, hari_ini.day) < (tgl_lahir.month, tgl_lahir.day))
+
+# Teks konversi untuk mempermudah pembacaan di kuesioner anak vs dewasa
+if hitung_umur < 1:
+    # Jika di bawah 1 tahun, hitung dalam bulan
+    selisih_bulan = (hari_ini.year - tgl_lahir.year) * 12 + hari_ini.month - tgl_lahir.month
+    umur_pasien_teks = f"{selisih_bulan} Bulan"
+else:
+    umur_pasien_teks = f"{hitung_umur} Tahun"
+
+# Tampilkan info umur riil agar petugas tahu kalkulasi berjalan sukses
+st.write(f"ℹ️ **Umur Terkalkulasi:** {umur_pasien_teks}")
+
 st.markdown("---")
 
 # Initialize shared upload variables
@@ -146,14 +161,14 @@ if "EPDS" in kategori:
         if flag_danger == "Ada":
             st.error("🚨 **ALARM UTAMA KLINIS (IDE CEDERA DIRI):** Pasien mengindikasikan pikiran menyakiti diri sendiri! Tatalaksana psikologis/rujukan darurat wajib berjalan segera!")
             
-        # Mapping 12 Kolom standar database untuk EPDS
+        # Mapping 12 Kolom standar database untuk EPDS (Menggunakan umur_pasien_teks)
         baris_data_cloud = [
             str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), # Kolom A: Waktu Input
             nama,                                                      # Kolom B: Nama Pasien
             f"NIK/RM: {nik}",                                          # Kolom C: NIK
-            umur,                                                      # 🎯 Kolom D Baru: Jalur Umur/Usia Pasien
-            "EPDS (Ibu Perinatal)",                                    # Kolom E: Jenis Kuesioner (Geser dari D ke E)
-            skor_total,                                                # Kolom F: Sub-Skor / Detail (Geser dari E ke F)
+            umur_pasien_teks,                                          # Kolom D: Umur Universal Pasien
+            "EPDS (Ibu Perinatal)",                                    # Kolom E: Jenis Kuesioner
+            skor_total,                                                # Kolom F: Sub-Skor / Detail
             "-",                                                       # Kolom G: Status Interpretasi
             status_mental,                                             # Kolom H: Rekomendasi Klinis
             rekomendasi,                                               # Kolom I: Interpretasi Hasil
@@ -166,201 +181,4 @@ if "EPDS" in kategori:
 # =========================================================================
 # 3. MODUL KUESIONER ANAK & REMAJA (SDQ)
 # =========================================================================
-elif "SDQ" in kategori:
-    st.subheader("🧸 Kuesioner SDQ (Strengths and Difficulties Questionnaire)")
-    tipe_sdq = st.selectbox("Pilih Versi Instrumen SDQ:", ["SDQ Anak (Usia 4-10 Tahun / Parent-Report)", "SDQ Remaja (Usia 11-17 Tahun / Self-Report)"], key="pilih_versi_sdq")
-    opsi_sdq = ["Tidak Benar", "Agak Benar", "Selalu Benar"]
-    
-    # Render pertanyaan (Gunakan form radio button terpusat)
-    if "Remaja" in tipe_sdq:
-        st.info("Sudut pandang Remaja (Self-Report)")
-        q1 = st.radio("1. Aku berusaha bersikap baik kepada orang lain. Aku peduli dengan perasaan mereka (Pr1):", opsi_sdq, key="sdq_r1")
-        q2 = st.radio("2. Aku gelisah, aku tidak dapat duduk diam untuk waktu lama (H1):", opsi_sdq, key="sdq_r2")
-        q3 = st.radio("3. Aku sering mengeluh sakit kepala, sakit perut atau sakit-sakit lainnya (E1):", opsi_sdq, key="sdq_r3")
-        q4 = st.radio("4. Kalau aku mempunyai mainan, makanan, atau pensil, aku bersedia berbagi dengan orang lain (Pr2):", opsi_sdq, key="sdq_r4")
-        q5 = st.radio("5. Aku menjadi sangat marah dan sering tidak bisa mengendalikan kemarahanku (C1):", opsi_sdq, key="sdq_r5")
-        q6 = st.radio("6. Aku cenderung menyendiri. Aku lebih suka bermain atau menghabiskan waktu seorang diri (P1):", opsi_sdq, key="sdq_r6")
-        q7 = st.radio("7. Aku umumnya bertingkah laku baik dan biasanya melakukan apa yang diminta oleh orang dewasa (C2*):", opsi_sdq, key="sdq_r7")
-        q8 = st.radio("8. Sering kali aku merasa khawatir terhadap banyak hal (E2):", opsi_sdq, key="sdq_r8")
-        q9 = st.radio("9. Aku suka menolong jika ada seseorang yang terluka, kecewa, atau merasa sedih (Pr3):", opsi_sdq, key="sdq_r9")
-        q10 = st.radio("10. Aku terus-menerus bergerak dengan resah atau menggeliat-geliat (H2):", opsi_sdq, key="sdq_r10")
-        q11 = st.radio("11. Aku mempunyai satu atau lebih teman dekat yang sangat baik (P2*):", opsi_sdq, key="sdq_r11")
-        q12 = st.radio("12. Aku sering bertengkar dengan anak-anak lain atau mengintimidasi mereka (C3):", opsi_sdq, key="sdq_r12")
-        q13 = st.radio("13. Aku sering merasa tidak bahagia, sedih, bahkan sampai menangis (E3):", opsi_sdq, key="sdq_r13")
-        q14 = st.radio("14. Pada umumnya, teman-teman sebayaku menyukai diriku (P3*):", opsi_sdq, key="sdq_r14")
-        q15 = st.radio("15. Perhatianku mudah teralih dan aku sulit untuk berkonsentrasi (H3):", opsi_sdq, key="sdq_r15")
-        q16 = st.radio("16. Aku merasa gugup atau sulit berpisah dengan orang tua dalam situasi baru; aku mudah kehilangan rasa percaya diri (E4):", opsi_sdq, key="sdq_r16")
-        q17 = st.radio("17. Aku bersikap manis dan ramah terhadap anak-anak yang usianya lebih muda dariku (Pr4):", opsi_sdq, key="sdq_r17")
-        q18 = st.radio("18. Aku sering dituduh berbohong atau berbuat curang (C4):", opsi_sdq, key="sdq_r18")
-        q19 = st.radio("19. Aku sering diganggu, dipermainkan, diintimidasi, atau diancam oleh anak-anak lain (P4):", opsi_sdq, key="sdq_r19")
-        q20 = st.radio("20. Aku sering menawarkan diri untuk membantu orang lain (orang tua, guru, atau teman-teman) (Pr5):", opsi_sdq, key="sdq_r20")
-        q21 = st.radio("21. Sebelum melakukan sesuatu, aku biasanya berpikir dahulu tentang akibatnya (H4*):", opsi_sdq, key="sdq_r21")
-        q22 = st.radio("22. Aku mengambil barang yang bukan milikku dari rumah, sekolah, atau tempat lain (C5):", opsi_sdq, key="sdq_r22")
-        q23 = st.radio("23. Aku merasa lebih mudah berteman dengan orang dewasa daripada dengan anak-anak sebayaku (P5):", opsi_sdq, key="sdq_r23")
-        q24 = st.radio("24. Banyak hal yang aku takuti, aku mudah menjadi takut (E5):", opsi_sdq, key="sdq_r24")
-        q25 = st.radio("25. Aku memiliki perhatian yang baik terhadap tugas-tugas dan mampu menyelesaikannya hingga selesai (H5*):", opsi_sdq, key="sdq_r25")
-    else:
-        st.info("Sudut pandang Orang Tua/Pengasuh (Parent-Report)")
-        q1 = st.radio("1. Dapat memperdulikan perasaan orang lain (Pr1):", opsi_sdq, key="sdq_a1")
-        q2 = st.radio("2. Gelisah, anak tidak dapat diam untuk waktu lama (H1):", opsi_sdq, key="sdq_a2")
-        q3 = st.radio("3. Sering mengeluh sakit kepala, sakit perut atau sakit-sakit lainnya (E1):", opsi_sdq, key="sdq_a3")
-        q4 = st.radio("4. Kalau anak mempunyai mainan, kesenangan atau pinsil, anak bersedia berbagi dengan anak-anak lain (Pr2):", opsi_sdq, key="sdq_a4")
-        q5 = st.radio("5. Anak sering sulit mengendalikan kemarahannya (C1):", opsi_sdq, key="sdq_a5")
-        q6 = st.radio("6. Cenderung menyendiri, lebih suka bermain dengan seorang diri (P1):", opsi_sdq, key="sdq_a6")
-        q7 = st.radio("7. Umumnya bertingkah laku baik, biasanya melakukan apa yang disuruh oleh orang dewasa (C2*):", opsi_sdq, key="sdq_a7")
-        q8 = st.radio("8. Banyak kekhawatiran atau sering tampak khawatir (E2):", opsi_sdq, key="sdq_a8")
-        q9 = st.radio("9. Suka menolong jika seseorang terluka, kecewa atau merasa sakit (Pr3):", opsi_sdq, key="sdq_a9")
-        q10 = st.radio("10. Terus menerus bergerak dengan resah atau menggeliat-geliat (H2):", opsi_sdq, key="sdq_a10")
-        q11 = st.radio("11. Mempunyai satu atau lebih teman baik (P2*):", opsi_sdq, key="sdq_a11")
-        q12 = st.radio("12. Sering berkelahi dengan anak-anak lain atau mengintimidasi mereka (C3):", opsi_sdq, key="sdq_a12")
-        q13 = st.radio("13. Sering merasa tidak bahagia, sedih atau menangis (E3):", opsi_sdq, key="sdq_a13")
-        q14 = st.radio("14. Pada umumnya disukai oleh anak-anak lain (P3*):", opsi_sdq, key="sdq_a14")
-        q15 = st.radio("15. Mudah teralih perhatiannya, tidak dapat berkonsentrasi (H3):", opsi_sdq, key="sdq_a15")
-        q16 = st.radio("16. Gugup atau sulit berpisah dengan orang tua/pengasuhnya pada situasi baru, mudah kehilangan rasa percaya diri (E4):", opsi_sdq, key="sdq_a16")
-        q17 = st.radio("17. Bersikap baik terhadap anak-anak yang lebih muda (Pr4):", opsi_sdq, key="sdq_a17")
-        q18 = st.radio("18. Sering berbohong atau berbuat curang (C4):", opsi_sdq, key="sdq_a18")
-        q19 = st.radio("19. Diganggu, dipermainkan, diintimidasi atau diancam oleh anak-anak lain (P4):", opsi_sdq, key="sdq_a19")
-        q20 = st.radio("20. Sering menawarkan diri untuk membantu orang lain (orangtua, guru, anak-anak lain) (Pr5):", opsi_sdq, key="sdq_a20")
-        q21 = st.radio("21. Sebelum melakukan sesuatu ia berpikir dahulu tentang akibatnya (H4*):", opsi_sdq, key="sdq_a21")
-        q22 = st.radio("22. Mencuri dari rumah, sekolah, atau tempat lain (C5):", opsi_sdq, key="sdq_a22")
-        q23 = st.radio("23. Lebih mudah berteman dengan anak-anak lain daripada dengan orang dewasa (P5):", opsi_sdq, key="sdq_a23")
-        q24 = st.radio("24. Banyak yang ditakuti, mudah menjadi takut (E5):", opsi_sdq, key="sdq_a24")
-        q25 = st.radio("25. Memiliki perhatian yang baik terhadap apapun, mampu menyelesaikan tugas atau pekerjaan rumah sampai selesai (H5*):", opsi_sdq, key="sdq_a25")
-
-    if st.button("Hitung & Simpan Skor SDQ", key="btn_sdq"):
-        skala_dasar = {"Tidak Benar": 0, "Agak Benar": 1, "Selalu Benar": 2}
-        skala_terbalik = {"Tidak Benar": 2, "Agak Benar": 1, "Selalu Benar": 0}
-
-        skor_emosi = skala_dasar[q3] + skala_dasar[q8] + skala_dasar[q13] + skala_dasar[q16] + skala_dasar[q24]
-        skor_perilaku = skala_dasar[q5] + skala_terbalik[q7] + skala_dasar[q12] + skala_dasar[q18] + skala_dasar[q22]
-        skor_hiper = skala_dasar[q2] + skala_dasar[q10] + skala_dasar[q15] + skala_terbalik[q21] + skala_terbalik[q25]
-        skor_sebaya = skala_dasar[q6] + skala_terbalik[q11] + skala_terbalik[q14] + skala_dasar[q19] + skala_dasar[q23]
-        skor_prososial = skala_dasar[q1] + skala_dasar[q4] + skala_dasar[q9] + skala_dasar[q17] + skala_dasar[q20]
-        
-        skor_total = skor_emosi + skor_perilaku + skor_hiper + skor_sebaya
-
-        if "Remaja" in tipe_sdq:
-            status_mental = "Normal" if skor_total <= 15 else ("Borderline" if skor_total <= 19 else "Abnormal")
-        else:
-            status_mental = "Normal" if skor_total <= 13 else ("Borderline" if skor_total <= 16 else "Abnormal")
-            
-        rekomendasi = "Edukasi kesehatan mental anak & evaluasi rutin." if status_mental == "Normal" else ("Jadwalkan skrining ulang & edukasi pola asuh." if status_mental == "Borderline" else "Rujuk ke poli tumbuh kembang anak / psikolog.")
-        detail_sub = f"E:{skor_emosi}, P:{skor_perilaku}, H:{skor_hiper}, S:{skor_sebaya}, Pr:{skor_prososial}"
-        
-        # Tampilkan Hasil Presentasi Medis di Layar
-        st.markdown("### 📊 Hasil Interpretasi")
-        col_m1, col_m2 = st.columns(2)
-        with col_m1:
-            st.metric(label="SKOR TOTAL KESULITAN", value=f"{skor_total} / 40")
-            if status_mental == "Normal": st.success(f"Klasifikasi: **{status_mental}**")
-            elif status_mental == "Borderline": st.warning(f"Klasifikasi: **{status_mental}**")
-            else: st.error(f"Klasifikasi: **{status_mental}**")
-        with col_m2:
-            st.metric(label="SKOR PROSOSIAL (KEKUATAN)", value=f"{skor_prososial} / 10")
-            st.info(f"Subskala Kekuatan: {status_mental}")
-
-        st.markdown(f"""
-        | Subskala Analisis | Skor Capaian |
-        | :--- | :---: |
-        | 🧠 **Gejala Emosional (E)** | {skor_emosi} / 10 |
-        | 🚸 **Masalah Perilaku (C)** | {skor_perilaku} / 10 |
-        | ⚡ **Hiperaktivitas/Inatensi (H)** | {skor_hiper} / 10 |
-        | 👥 **Masalah Teman Sebaya (P)** | {skor_sebaya} / 10 |
-        """)
-        
-        # Mapping 12 Kolom standar database untuk SDQ
-        baris_data_cloud = [
-            str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), # Kolom A: Waktu Input
-            nama,                                                      # Kolom B: Nama Pasien
-            f"NIK/RM: {nik}",                                          # Kolom C: NIK
-            umur,                                                      # 🎯 Kolom D Baru: Jalur Umur/Usia Pasien
-            tipe_sdq,                                                  # Kolom E: Jenis Kuesioner (Geser dari D ke E)
-            skor_total,                                                # Kolom F: Sub-Skor / Detail (Geser dari E ke F)
-            detail_sub,                                                # Kolom G: Status Interpretasi
-            status_mental,                                             # Kolom H: Rekomendasi Klinis
-            rekomendasi,                                               # Kolom I: Interpretasi Hasil
-            "Anak/Remaja",                                             # Kolom J: Kategori Lingkungan / Faktor Risiko
-            pemeriksa,                                                 # Kolom K: Pemeriksa
-            "-"                                                        # Kolom L: Catatan
-        ]
-        sudah_submit = True
-
-# =========================================================================
-# 4. MODUL KUESIONER ORANG DEWASA / UMUM (SRQ-20)
-# =========================================================================
-else:
-    st.subheader("📋 Self Reporting Questionnaire (SRQ-20)")
-    st.info("Pertanyaan berikut berhubungan dengan masalah yang mungkin mengganggu Anda selama 30 hari terakhir.")
-    
-    pertanyaan_srq = [
-        "1. Apakah Anda sering merasa sakit kepala?", "2. Apakah Anda kehilangan nafsu makan?", "3. Apakah tidur Anda tidak nyenyak?",
-        "4. Apakah Anda mudah merasa takut?", "5. Apakah Anda merasa cemas, tegang, atau khawatir?", "6. Apakah tangan Anda gemetar?",
-        "7. Apakah Anda mengalami gangguan pencernaan?", "8. Apakah Anda merasa sulit berpikir jernih?", "9. Apakah Anda merasa tidak bahagia?",
-        "10. Apakah Anda lebih sering menangis?", "11. Apakah Anda merasa sulit untuk menikmati aktivitas sehari-hari?",
-        "12. Apakah Anda mengalami kesulitan untuk mengambil keputusan?", "13. Apakah aktivitas/tugas sehari-hari Anda terbengkalai?",
-        "14. Apakah Anda merasa tidak mampu berperan dalam kehidupan ini?", "15. Apakah Anda kehilangan minat terhadap banyak hal?",
-        "16. Apakah Anda merasa tidak berharga?", "17. Apakah Anda mempunyai pikiran untuk mengakhiri hidup Anda?",
-        "18. Apakah Anda merasa lelah sepanjang waktu?", "19. Apakah Anda merasa tidak enak di perut?", "20. Apakah Anda mudah lelah?"
-    ]
-    
-    jawaban_srq = {}
-    for i, q in enumerate(pertanyaan_srq):
-        jawaban_srq[f"srq_{i+1}"] = st.radio(q, ["Tidak (T)", "Ya (Y)"], key=f"srq_q_{i+1}")
-
-    if st.button("Hitung & Simpan Skor SRQ-20", key="btn_srq"):
-        skor_total = sum([1 if jawaban_srq[f"srq_{k}"] == "Ya (Y)" else 0 for k in range(1, 21)])
-        ide_bunuh_diri = "Ada" if jawaban_srq["srq_17"] == "Ya (Y)" else "Tidak Ada"
-        
-        if ide_bunuh_diri == "Ada":
-            status_mental = "Indikasi Masalah Jiwa (Kritis - No 17 YA)"
-            rekomendasi = "Terdapat pikiran mengakhiri hidup. Wajib segera lakukan pemeriksaan lanjutan wawancara psikiatrik dan pendampingan ketat."
-            st.error(f"**Status:** {status_mental}")
-        elif skor_total >= 6:
-            status_mental = "Indikasi Masalah Kesehatan Jiwa"
-            rekomendasi = "Skor total ≥ 6. Pasien memerlukan pemeriksaan lanjutan wawancara psikiatrik di Puskesmas."
-            st.error(f"**Status:** {status_mental}")
-        else:
-            status_mental = "Normal / Sehat Jiwa"
-            rekomendasi = "Hasil skrining normal. Berikan edukasi perawatan kesehatan mental mandiri."
-            st.success(f"**Status:** {status_mental}")
-            
-        st.metric(label="SKOR JAWABAN 'YA'", value=f"{skor_total} / 20")
-        st.info(f"💡 **Rekomendasi Tindakan:** {rekomendasi}")
-        
-        if ide_bunuh_diri == "Ada":
-            st.warning("🚨 **CRITICAL RED FLAG:** Jangan biarkan pasien pulang tanpa pengawasan keluarga atau nakes!")
-            
-        # Mapping 12 Kolom standar database untuk SRQ-20
-        baris_data_cloud = [
-            str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), # Kolom A: Waktu Input
-            nama,                                                      # Kolom B: Nama Pasien
-            f"NIK/RM: {nik}",                                          # Kolom C: NIK
-            umur,                                                      # 🎯 Kolom D Baru: Jalur Umur/Usia Pasien
-            "SRQ-20 (Dewasa)",                                         # Kolom E: Jenis Kuesioner
-            skor_total,                                                # Kolom F: Sub-Skor / Detail
-            "-",                                                       # Kolom G: Status Interpretasi
-            status_mental,                                             # Kolom H: Rekomendasi Klinis
-            rekomendasi,                                               # Kolom I: Interpretasi Hasil
-            "Dewasa Umum",                                             # Kolom J: Kategori Lingkungan / Faktor Risiko
-            pemeriksa,                                                 # Kolom K: Pemeriksa
-            "-"                                                        # Kolom L: Catatan
-        ]
-        
-        sudah_submit = True
-
-# =========================================================================
-# 5. AKSI EKSEKUSI: PENGIRIMAN DATA CLOUD & TOMBOL PDF
-# =========================================================================
-if sudah_submit:
-    with st.spinner("Sedang merekam hasil skrining ke database Google Sheets..."):
-        try:
-            sheet_mental = koneksi_spreadsheet_mental()
-            sheet_mental.append_row(baris_data_cloud)
-            st.balloons()
-            st.success("✅ Seluruh data skrining kesehatan mental berhasil disimpan ke tab 'Sheet_Mental_Health'!")
-        except Exception as e:
-            st.error(f"⚠️ Gagal mengirim data ke Google Sheets. Periksa konfigurasi st.secrets Anda. Error: {e}")
-            
-    # Menampilkan tombol print PDF secara elegan tepat setelah proses kalkulasi & simpan sukses
-    st.markdown("---")
-    tambahkan_tombol_cetak_pdf()
+elif "SD
