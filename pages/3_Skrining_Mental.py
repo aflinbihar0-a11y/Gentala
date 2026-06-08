@@ -146,10 +146,20 @@ if "EPDS" in kategori:
         if flag_danger == "Ada":
             st.error("🚨 **ALARM UTAMA KLINIS (IDE CEDERA DIRI):** Pasien mengindikasikan pikiran menyakiti diri sendiri! Tatalaksana psikologis/rujukan darurat wajib berjalan segera!")
             
-        # Mapping 12 Kolom standar database
+        # Mapping 12 Kolom standar database untuk EPDS
         baris_data_cloud = [
-            str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-            nama, f"NIK/RM: {nik}", "EPDS (Ibu Perinatal)", skor_total, "-", status_mental, rekomendasi, "Ibu Hamil/Menyusui", flag_danger, pemeriksa, "-"
+            str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), # Kolom A: Waktu Input
+            nama,                                                      # Kolom B: Nama Pasien
+            f"NIK/RM: {nik}",                                          # Kolom C: NIK
+            umur,                                                      # 🎯 Kolom D Baru: Jalur Umur/Usia Pasien
+            "EPDS (Ibu Perinatal)",                                    # Kolom E: Jenis Kuesioner (Geser dari D ke E)
+            skor_total,                                                # Kolom F: Sub-Skor / Detail (Geser dari E ke F)
+            "-",                                                       # Kolom G: Status Interpretasi
+            status_mental,                                             # Kolom H: Rekomendasi Klinis
+            rekomendasi,                                               # Kolom I: Interpretasi Hasil
+            "Ibu Hamil/Menyusui",                                      # Kolom J: Kategori Lingkungan / Faktor Risiko
+            pemeriksa,                                                 # Kolom K: Pemeriksa
+            "-"                                                        # Kolom L: Catatan
         ]
         sudah_submit = True
 
@@ -258,10 +268,20 @@ elif "SDQ" in kategori:
         | 👥 **Masalah Teman Sebaya (P)** | {skor_sebaya} / 10 |
         """)
         
-        # Mapping 12 Kolom standar database
+        # Mapping 12 Kolom standar database untuk SDQ
         baris_data_cloud = [
-            str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-            nama, f"NIK/RM: {nik}", tipe_sdq, skor_total, detail_sub, status_mental, rekomendasi, "Anak/Remaja", "-", pemeriksa, "-"
+            str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), # Kolom A: Waktu Input
+            nama,                                                      # Kolom B: Nama Pasien
+            f"NIK/RM: {nik}",                                          # Kolom C: NIK
+            umur,                                                      # 🎯 Kolom D Baru: Jalur Umur/Usia Pasien
+            tipe_sdq,                                                  # Kolom E: Jenis Kuesioner (Geser dari D ke E)
+            skor_total,                                                # Kolom F: Sub-Skor / Detail (Geser dari E ke F)
+            detail_sub,                                                # Kolom G: Status Interpretasi
+            status_mental,                                             # Kolom H: Rekomendasi Klinis
+            rekomendasi,                                               # Kolom I: Interpretasi Hasil
+            "Anak/Remaja",                                             # Kolom J: Kategori Lingkungan / Faktor Risiko
+            pemeriksa,                                                 # Kolom K: Pemeriksa
+            "-"                                                        # Kolom L: Catatan
         ]
         sudah_submit = True
 
@@ -310,19 +330,20 @@ else:
         if ide_bunuh_diri == "Ada":
             st.warning("🚨 **CRITICAL RED FLAG:** Jangan biarkan pasien pulang tanpa pengawasan keluarga atau nakes!")
             
-        # Mapping 12 Kolom standar database (Diselaraskan dengan variabel asli kuesioner Anda)
+        # Mapping 12 Kolom standar database untuk SRQ-20
         baris_data_cloud = [
             str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), # Kolom A: Waktu Input
             nama,                                                      # Kolom B: Nama Pasien
-            f"NIK/RM: {nik}",                                          # Kolom C: Menyamakan format dengan EPDS & SDQ Anda
-            "SRQ-20 (Dewasa)",                                         # Kolom D: Jenis Kuesioner (String Langsung agar Aman)
-            skor_total,                                                # Kolom E: Skor total SRQ Anda (Sesuaikan jika nama variabelnya 'skor')
-            "-",                                                       # Kolom F: Diisi "-" sesuai database asli Anda
-            status_mental,                                             # Kolom G: Rekomendasi/Status Klinis (Variabel penentu tanda bahaya)
-            rekomendasi,                                               # Kolom H: Masuk ke Kolom Interpretasi Hasil Universal
-            "Dewasa Umum",                                             # Kolom I: Faktor Risiko / Kategori Lingkungan
-            pemeriksa,                                                 # Kolom J: Pemeriksa
-            "-"                                                        # Kolom K: Catatan
+            f"NIK/RM: {nik}",                                          # Kolom C: NIK
+            umur,                                                      # 🎯 Kolom D Baru: Jalur Umur/Usia Pasien
+            "SRQ-20 (Dewasa)",                                         # Kolom E: Jenis Kuesioner
+            skor_total,                                                # Kolom F: Sub-Skor / Detail
+            "-",                                                       # Kolom G: Status Interpretasi
+            status_mental,                                             # Kolom H: Rekomendasi Klinis
+            rekomendasi,                                               # Kolom I: Interpretasi Hasil
+            "Dewasa Umum",                                             # Kolom J: Kategori Lingkungan / Faktor Risiko
+            pemeriksa,                                                 # Kolom K: Pemeriksa
+            "-"                                                        # Kolom L: Catatan
         ]
         
         sudah_submit = True
