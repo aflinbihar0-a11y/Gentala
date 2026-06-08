@@ -279,7 +279,7 @@ else:
         "10. Apakah Anda lebih sering menangis?", "11. Apakah Anda merasa sulit untuk menikmati aktivitas sehari-hari?",
         "12. Apakah Anda mengalami kesulitan untuk mengambil keputusan?", "13. Apakah aktivitas/tugas sehari-hari Anda terbengkalai?",
         "14. Apakah Anda merasa tidak mampu berperan dalam kehidupan ini?", "15. Apakah Anda kehilangan minat terhadap banyak hal?",
-        "16. Apakah Anda merasa tidak berharga?", "17. Apakah Andamempunyai pikiran untuk mengakhiri hidup Anda?",
+        "16. Apakah Anda merasa tidak berharga?", "17. Apakah Anda mempunyai pikiran untuk mengakhiri hidup Anda?",
         "18. Apakah Anda merasa lelah sepanjang waktu?", "19. Apakah Anda merasa tidak enak di perut?", "20. Apakah Anda mudah lelah?"
     ]
     
@@ -293,7 +293,7 @@ else:
         
         if ide_bunuh_diri == "Ada":
             status_mental = "Indikasi Masalah Jiwa (Kritis - No 17 YA)"
-            rekomendasi = "Terdapat ide mengakhiri hidup. Wajib segera lakukan pemeriksaan lanjutan wawancara psikiatrik dan pendampingan ketat."
+            rekomendasi = "Terdapat pikiran mengakhiri hidup. Wajib segera lakukan pemeriksaan lanjutan wawancara psikiatrik dan pendampingan ketat."
             st.error(f"**Status:** {status_mental}")
         elif skor_total >= 6:
             status_mental = "Indikasi Masalah Kesehatan Jiwa"
@@ -308,7 +308,7 @@ else:
         st.info(f"💡 **Rekomendasi Tindakan:** {rekomendasi}")
         
         if ide_bunuh_diri == "Ada":
-            st.warning("🚨 **CRITICAL RED FLAG:** Jangan biarkan pasien pulang tanpa pengawasan keluarga dan nakes!")
+            st.warning("🚨 **CRITICAL RED FLAG:** Jangan biarkan pasien pulang tanpa pengawasan keluarga atau nakes!")
             
         # Mapping 12 Kolom standar database
         baris_data_cloud = [
