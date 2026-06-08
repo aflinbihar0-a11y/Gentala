@@ -81,7 +81,7 @@ try:
             st.markdown("#### 📅 Tren Kunjungan Pemeriksaan Gizi")
             
             # Kolom A di Google Sheets Anda bernama 'Waktu Input'
-            kolom_waktu = "Waktu Input"
+            kolom_waktu = "Tanggal Periksa"
             
             if kolom_waktu in df_gizi.columns and not df_gizi.empty:
                 # Salin dataframe gizi untuk manipulasi tanggal
