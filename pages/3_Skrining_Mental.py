@@ -86,7 +86,7 @@ col_id1, col_id2 = st.columns(2)
 
 with col_id1:
     nama = st.text_input("Nama Lengkap Pasien:", key="id_nama")
-    nik = st.text_input("Nomor NIK / No. RM:", key="id_nik")
+    nik = st.text_input("Nomor NIK (Boleh dikosongkan):", key="id_nik")
 
 with col_id2:
     tgl_lahir = st.date_input("Tanggal Lahir:", value=datetime.date(2000, 1, 1), key="id_tgl")
