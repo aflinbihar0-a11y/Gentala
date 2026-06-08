@@ -27,6 +27,9 @@ def koneksi_spreadsheet():
 with st.form("input_data"):
     st.markdown("### 📋 Form Input Data Pasien")
     nama = st.text_input("Nama Anak")
+    alamat_pasien = st.selectbox(
+    "Alamat (Desa/Kelurahan)",
+    ["Batu Tangga", "Muara Hungi", "Pembakulan", "Nateh", "Datar Batung", "Desa Lainnya"]
     jk = st.radio("Jenis Kelamin", ["Laki-laki", "Perempuan"])
     st.markdown("*(Sesuai aturan Kemenkes, sisa hari tidak digenapkan ke atas. Contoh: 2 bulan 29 hari = 2 bulan)*")
     tgl_lahir = st.date_input("Tanggal Lahir", value=datetime.date(2024, 1, 1))
