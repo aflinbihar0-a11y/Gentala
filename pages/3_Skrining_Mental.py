@@ -314,7 +314,7 @@ else:
         baris_baru = [
             str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), # Kolom A: Waktu Input
             nama,                                               # Kolom B: Nama Pasien
-            umur_pasien,                                               # Kolom C: Umur (Tahun/Bulan)
+            umur,                                               # Kolom C: Umur (Tahun/Bulan)
             jenis_kuesioner,                                           # Kolom D: Jenis Kuesioner (EPDS/SRQ-20/SDQ)
             sub_skor_detail,                                           # Kolom E: Sub-Skor / Detail
             status_interpretasi,                                       # Kolom F: Status Interpretasi
