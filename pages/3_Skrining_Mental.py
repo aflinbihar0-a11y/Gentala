@@ -311,9 +311,19 @@ else:
             st.warning("🚨 **CRITICAL RED FLAG:** Jangan biarkan pasien pulang tanpa pengawasan keluarga atau nakes!")
             
         # Mapping 12 Kolom standar database
-        baris_data_cloud = [
-            str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-            nama, f"NIK/RM: {nik}", "SRQ-20 (Dewasa)", skor_total, "-", status_mental, rekomendasi, "Dewasa Umum", ide_bunuh_diri, pemeriksa, "-"
+        baris_baru = [
+            str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), # Kolom A: Waktu Input
+            nama_pasien,                                               # Kolom B: Nama Pasien
+            umur_pasien,                                               # Kolom C: Umur (Tahun/Bulan)
+            jenis_kuesioner,                                           # Kolom D: Jenis Kuesioner (EPDS/SRQ-20/SDQ)
+            sub_skor_detail,                                           # Kolom E: Sub-Skor / Detail
+            status_interpretasi,                                       # Kolom F: Status Interpretasi
+            rekomendasi_klinis,                                        # Kolom G: Rekomendasi Klinis
+        # 🎯 SEKARANG KOLOM H BERSIFAT UNIVERSAL UNTUK SEMUA KUESIONER:
+            kategori_hasil_kuesioner,                                  # Kolom H: Masukkan interpretasi teks di sini (Contoh: "Indikasi Masalah Jiwa", "Risiko Tinggi Depresi", atau "Normal")
+            faktor_risiko,                                             # Kolom I: Faktor Risiko
+            pemeriksa,                                                 # Kolom J: Pemeriksa
+            catatan                                                    # Kolom K: Catatan
         ]
         sudah_submit = True
 
