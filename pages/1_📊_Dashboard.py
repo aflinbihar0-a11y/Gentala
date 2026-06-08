@@ -121,26 +121,40 @@ try:
         st.markdown("#### 🚨 Daftar Prioritas Rujukan Jiwa (Critical Action List)")
         st.caption("Menyaring otomatis pasien dengan indikasi risiko tinggi/ide cedera diri untuk intervensi segera.")
         
-        # Filter data kritis berdasarkan interpretasi/risiko (Sesuaikan kolom di tab kesehatan jiwa Anda)
-        kolom_interpretasi = "Status Interpretasi"
-        kolom_risiko = "Faktor Risiko"
+        # Menyelaraskan nama kolom dengan Google Sheets terbaru Anda
+        kolom_rekomendasi = "Rekomendasi Klinis"
+        kolom_hasil_universal = "Interpretasi Hasil"  # Kolom H universal Anda (menggantikan Kategori Ibu)
+        kolom_interpretasi_f = "Status Interpretasi"  # Kolom F
+        kolom_risiko = "Faktor Risiko"                 # Kolom I
         
-        if kolom_interpretasi in df_mental.columns:
-            # Memfilter baris yang mengandung kata kunci tanda bahaya
+        if kolom_rekomendasi in df_mental.columns:
+            # Saringan super ketat untuk mendeteksi unsur kegawatan (Triage Merah)
             df_kritis = df_mental[
-                (df_mental[kolom_interpretasi].str.contains('Kritis|Tinggi|Abnormal|Risiko Tinggi', case=False, na=False)) |
+                # 1. Deteksi kata kunci kritis pada Kolom G (Rekomendasi Klinis)
+                (df_mental[kolom_rekomendasi].str.contains('mengakhiri hidup|psikiatrik|kritis|Rujuk|cedera diri', case=False, na=False)) |
+                
+                # 2. Deteksi indikasi masalah pada Kolom H Universal (Interpretasi Hasil untuk semua kuesioner)
+                (df_mental.get(kolom_hasil_universal, pd.Series(dtype=str)).str.contains('Kritis|Tinggi|Abnormal|mengarah kuat|Risiko tinggi|Indikasi Masalah', case=False, na=False)) |
+                
+                # 3. Deteksi cadangan pada Kolom F (Status Interpretasi)
+                (df_mental.get(kolom_interpretasi_f, pd.Series(dtype=str)).str.contains('Kritis|Tinggi|Abnormal|Risiko Tinggi', case=False, na=False)) |
+                
+                # 4. Deteksi faktor risiko lingkungan pada Kolom I (Faktor Risiko)
                 (df_mental.get(kolom_risiko, pd.Series(dtype=str)).str.contains('Ada|Ya', case=False, na=False))
             ]
             
             if not df_kritis.empty:
-                st.error(f"⚠️ Perhatian! Ditemukan {len(df_kritis)} kasus kesehatan jiwa yang memerlukan tatalaksana segera.")
+                # Menampilkan notifikasi peringatan darurat berwarna merah tegas
+                st.error(f"⚠️ PERHATIAN DARURAT! Ditemukan {len(df_kritis)} kasus kesehatan jiwa yang memerlukan tatalaksana/intervensi segera.")
                 
-                # Kolom esensial yang ingin ditampilkan ke petugas rujukan
-                kolom_tampil = ['Waktu Input', 'Nama Pasien', 'Jenis Kuesioner', 'Status Interpretasi', 'Rekomendasi Klinis']
+                # Memilih kolom esensial yang bersih untuk ditampilkan di tabel rujukan nakes
+                kolom_tampil = ['Waktu Input', 'Nama Pasien', 'Jenis Kuesioner', kolom_hasil_universal, 'Rekomendasi Klinis', 'Pemeriksa']
                 kolom_tampil = [c for c in kolom_tampil if c in df_kritis.columns]
                 
+                # Menampilkan tabel pasien risiko tinggi
                 st.dataframe(df_kritis[kolom_tampil], use_container_width=True)
             else:
+                # Jika tidak ada kecocokan kata kunci bahaya, tampilkan indikator hijau aman
                 st.success("✅ Seluruh data terpantau aman. Tidak ada indikasi kegawatan mental/ide cedera diri saat ini.")
         else:
             st.info("Sistem siap. Menunggu entri data kuesioner kesehatan jiwa.")
