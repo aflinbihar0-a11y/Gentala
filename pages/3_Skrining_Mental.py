@@ -310,19 +310,19 @@ else:
         if ide_bunuh_diri == "Ada":
             st.warning("🚨 **CRITICAL RED FLAG:** Jangan biarkan pasien pulang tanpa pengawasan keluarga atau nakes!")
             
-        # Mapping 12 Kolom standar database (Diselaraskan dengan EPDS & SDQ)
+        # Mapping 12 Kolom standar database (Diselaraskan dengan variabel asli kuesioner Anda)
         baris_data_cloud = [
             str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), # Kolom A: Waktu Input
-            nama,                                                      # Kolom B: Nama Pasien (Memakai variabel 'nama' asli Anda)
-            umur,                                                      # Kolom C: Umur (Memakai variabel 'umur' asli Anda)
-            jenis_kuesioner,                                           # Kolom D: Jenis Kuesioner (SRQ-20)
-            sub_skor_detail,                                           # Kolom E: Sub-Skor / Detail
-            status_interpretasi,                                       # Kolom F: Status Interpretasi
-            rekomendasi_klinis,                                        # Kolom G: Rekomendasi Klinis
-            kategori_hasil_kuesioner,                                  # Kolom H: Interpretasi Hasil Universal
-            faktor_risiko,                                             # Kolom I: Faktor Risiko
+            nama,                                                      # Kolom B: Nama Pasien
+            f"NIK/RM: {nik}",                                          # Kolom C: Menyamakan format dengan EPDS & SDQ Anda
+            "SRQ-20 (Dewasa)",                                         # Kolom D: Jenis Kuesioner (String Langsung agar Aman)
+            skor_total,                                                # Kolom E: Skor total SRQ Anda (Sesuaikan jika nama variabelnya 'skor')
+            "-",                                                       # Kolom F: Diisi "-" sesuai database asli Anda
+            status_mental,                                             # Kolom G: Rekomendasi/Status Klinis (Variabel penentu tanda bahaya)
+            rekomendasi,                                               # Kolom H: Masuk ke Kolom Interpretasi Hasil Universal
+            "Dewasa Umum",                                             # Kolom I: Faktor Risiko / Kategori Lingkungan
             pemeriksa,                                                 # Kolom J: Pemeriksa
-            catatan                                                    # Kolom K: Catatan
+            "-"                                                        # Kolom K: Catatan
         ]
         
         sudah_submit = True
