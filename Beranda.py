@@ -21,30 +21,30 @@ def init_connection():
             "https://www.googleapis.com/auth/drive"
         ]
         
-        # BARU: Membaca kredensial dari Streamlit Secrets (bukan file fisik Kunci.json)
+        # Membaca kredensial dari Streamlit Secrets
         creds = Credentials.from_service_account_info(
             st.secrets["gcp_service_account"], 
             scopes=scope
         )
         client = gspread.authorize(creds)
         
-        # Membuka Spreadsheet
-        return client.open("GrowTrack Database").sheet1
+        # 💡 PERBAIKAN: Membuka file Spreadsheet utama secara utuh (tanpa mengunci .sheet1)
+        # agar kita bisa mengakses tab lain seperti tab "Pengaduan"
+        return client.open("GrowTrack Database")
     except Exception as e:
-        # Mengembalikan None jika gagal koneksi tanpa memunculkan error file fisik
         return None
 
 # Inisialisasi koneksi agar bisa dipakai di seluruh halaman
-sheet = init_connection()
+spreadsheet = init_connection()
 
 # ==========================================
 # 2. TAMPILAN UTAMA (BERANDA)
 # ==========================================
-st.title("🏥 Selamat Datang di GENTALA - Gerakan Terpadu Skrinig Gizi, Mental, & Telekonsultasi Anak")
+st.title("🏥 Selamat Datang di GENTALA - Gerakan Terpadu Skrining Gizi, Mental, & Telekonsultasi Anak")
 st.subheader("Inovasi Program Puskesmas Batu Tangga")
 
 # Informasi Status Koneksi di Sidebar
-if sheet:
+if spreadsheet:
     st.sidebar.success("✅ Database Terhubung")
 else:
     st.sidebar.error("❌ Database Terputus")
@@ -75,7 +75,6 @@ st.write(
 col_wa, col_email = st.columns(2)
 
 with col_wa:
-    # Menggunakan komponen st.info agar tampilannya berbentuk card berwarna biru muda yang rapi
     st.info(
         "6282157263167 🟢 WhatsApp Hotline\n\n"
         "Hubungi admin GENTALA untuk respon cepat:\n\n"
@@ -84,17 +83,13 @@ with col_wa:
 
 with col_email:
     st.info(
-        "Aflinbihar0@gamil.com ✉️ Email Resmi\n\n"
+        "Aflinbihar0@gmail.com ✉️ Email Resmi\n\n"
         "Kirimkan surat atau laporan kendala tertulis:\n\n"
-        "[📧 Kirim Email Klik Disini](mailto:email.puskesmas@domain.com)"  # Ganti dengan email resmi Puskesmas/Inovasi Dokter
+        "[📧 Kirim Email Klik Disini](mailto:Aflinbihar0@gmail.com)"
     )
 
-import streamlit as st
-from datetime import datetime
-# Catatan: Pastikan 'import gspread' dan objek 'sh' (spreadsheet) sudah didefinisikan di bagian atas Beranda.py Dokter.
-# Contoh jika di atas sudah ada: sh = gc.open("Nama_File_Google_Sheets_Dokter")
-
-st.markdown("---") # Garis pembatas horizontal untuk memisahkan konten beranda dan form
+# --- BAGIAN LAYANAN PENGADUAN & SARAN ---
+st.markdown("---") # Garis pembatas horizontal
 
 # 1. Judul dan Sub-judul Bagian Pengaduan
 st.markdown("## 📩 Kotak Saran & Pengaduan Layanan GENTALA")
@@ -138,34 +133,35 @@ if submit_button:
     if not isi_pesan.strip():
         st.error("❌ Mohon maaf, kolom detail keluhan atau saran wajib diisi agar kami dapat mengevaluasinya.")
     else:
-        try:
-            # A. Membuat stempel waktu otomatis (Waktu Indonesia Tengah / WITA)
-            waktu_sekarang = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            
-            # B. Validasi jika nama kosong atau hanya spasi, otomatis ubah jadi "Anonim"
-            nama_fix = nama_pengirim.strip() if nama_pengirim.strip() != "" else "Anonim"
-            
-            # C. Menyusun data menjadi baris list
-            data_baru = [waktu_sekarang, nama_fix, kategori_feedback, isi_pesan]
-            
-            # D. Memanggil secara spesifik TAB bernama "Pengaduan" di Google Sheets Dokter
-            conn.append_row(data_baru, worksheet="Pengaduan")
-            
-            # E. Memasukkan data ke baris paling bawah pada Tab Pengaduan
-            nama_worksheet_pengaduan.append_row(data_baru)
-            
-            # Jika berhasil, tampilkan pesan sukses
-            st.success("✅ Terima kasih! Umpan balik Anda telah direkam dengan aman ke database internal Puskesmas Batu Tangga.")
-            st.balloons() # Efek balon pelengkap biar interaktif di layar pengguna
-            
-        except Exception as e:
-            # Jika koneksi database Sheets Dokter bermasalah, beri tahu pengguna
-            st.error(f"❌ Terjadi kendala saat mengirim data ke server. Pastikan Tab 'Pengaduan' sudah dibuat di Google Sheets Anda. (Error: {e})")
+        if not spreadsheet:
+            st.error("❌ Terjadi kendala: Koneksi ke database terputus. Silakan hubungi Tim Teknis.")
+        else:
+            try:
+                # A. Membuat stempel waktu otomatis (Waktu Indonesia Tengah / WITA)
+                waktu_sekarang = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                
+                # B. Validasi jika nama kosong atau hanya spasi, otomatis ubah jadi "Anonim"
+                nama_fix = nama_pengirim.strip() if nama_pengirim.strip() != "" else "Anonim"
+                
+                # C. Menyusun data menjadi baris list
+                data_baru = [waktu_sekarang, nama_fix, kategori_feedback, isi_pesan]
+                
+                # 💡 PERBAIKAN: Memanggil secara spesifik TAB bernama "Pengaduan" dari objek spreadsheet
+                nama_worksheet_pengaduan = spreadsheet.worksheet("Pengaduan")
+                
+                # E. Memasukkan data ke baris paling bawah pada Tab Pengaduan
+                nama_worksheet_pengaduan.append_row(data_baru)
+                
+                # Jika berhasil, tampilkan pesan sukses
+                st.success("✅ Terima kasih! Umpan balik Anda telah direkam dengan aman ke database internal Puskesmas Batu Tangga.")
+                st.balloons() # Efek balon pelengkap biar interaktif di layar pengguna
+                
+            except Exception as e:
+                # Jika koneksi database Sheets Dokter bermasalah, beri tahu pengguna
+                st.error(f"❌ Terjadi kendala saat mengirim data ke server. Pastikan Tab 'Pengaduan' sudah dibuat di Google Sheets Anda. (Error: {e})")
 
 # =========================================================================
-# BAGIAN FOOTER / KONTAK UTAMA (BISA DILETAKKAN DI BAWAH FORM INI)
+# BAGIAN FOOTER AKHIR
 # =========================================================================
-
-# Menambahkan footer sederhana
 st.markdown("---")
 st.caption(f"© 2026 Grow.TrackID - Puskesmas Batu Tangga | Crtd By: dr. Aflin Bihar")
