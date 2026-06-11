@@ -40,7 +40,7 @@ spreadsheet = init_connection()
 # ==========================================
 # 2. TAMPILAN UTAMA (BERANDA)
 # ==========================================
-st.title("🏥 Selamat Datang di GENTALA - Gerakan Terpadu Skrining Gizi, Mental, & Telekonsultasi Anak")
+st.title("🏥 Selamat Datang di GENTALA - Gerakan Terpadu Skrining Gizi, Mental, & Telekonsultasi Anak- Dewasa")
 st.subheader("Inovasi Program Puskesmas Batu Tangga")
 
 # Informasi Status Koneksi di Sidebar
