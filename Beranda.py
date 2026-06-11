@@ -149,7 +149,7 @@ if submit_button:
             data_baru = [waktu_sekarang, nama_fix, kategori_feedback, isi_pesan]
             
             # D. Memanggil secara spesifik TAB bernama "Pengaduan" di Google Sheets Dokter
-            nama_worksheet_pengaduan = spreadsheet.worksheet("Pengaduan")
+            conn.append_row(data_baru, worksheet="Pengaduan")
             
             # E. Memasukkan data ke baris paling bawah pada Tab Pengaduan
             nama_worksheet_pengaduan.append_row(data_baru)
