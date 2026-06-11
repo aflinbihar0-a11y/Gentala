@@ -79,7 +79,7 @@ with col_wa:
     st.info(
         "6282157263167 🟢 WhatsApp Hotline\n\n"
         "Hubungi admin GENTALA untuk respon cepat:\n\n"
-        "[💬 Chat WhatsApp Klik Disini](https://wa.me/6282157263167)"  # Ganti XXXXXXXXXX dengan nomor HP (awali dengan 62, tanpa angka 0)
+        "[💬 Chat WhatsApp Klik Disini](https://wa.me/6282157263167)"
     )
 
 with col_email:
@@ -88,6 +88,83 @@ with col_email:
         "Kirimkan surat atau laporan kendala tertulis:\n\n"
         "[📧 Kirim Email Klik Disini](mailto:email.puskesmas@domain.com)"  # Ganti dengan email resmi Puskesmas/Inovasi Dokter
     )
+
+import streamlit as st
+from datetime import datetime
+# Catatan: Pastikan 'import gspread' dan objek 'sh' (spreadsheet) sudah didefinisikan di bagian atas Beranda.py Dokter.
+# Contoh jika di atas sudah ada: sh = gc.open("Nama_File_Google_Sheets_Dokter")
+
+st.markdown("---") # Garis pembatas horizontal untuk memisahkan konten beranda dan form
+
+# 1. Judul dan Sub-judul Bagian Pengaduan
+st.markdown("## 📩 Kotak Saran & Pengaduan Layanan GENTALA")
+st.write(
+    "Komitmen Puskesmas Batu Tangga adalah terus berinovasi. Silakan sampaikan keluhan, "
+    "kritik konstruktif, dan/atau saran pengembangan."
+)
+
+# 2. Membuat Wadah Formulir (st.form) agar halaman tidak reload setiap kali mengetik
+with st.form(key="form_pengaduan_beranda", clear_on_submit=True):
+    
+    # Input Nama (Bisa Anonim demi kenyamanan pengadu)
+    nama_pengirim = st.text_input(
+        "Nama Lengkap / Instansi:", 
+        placeholder="Contoh: Anonim / Kader Posyandu / Nakes"
+    )
+    
+    # Pilihan Kategori menggunakan Selectbox
+    kategori_feedback = st.selectbox(
+        "Kategori Umpan Balik:",
+        [
+            "Saran Pengembangan Fitur", 
+            "Kritik Konstruktif", 
+            "Laporan Kendala Teknis / Eror Aplikasi", 
+            "Pengaduan Layanan Sistem"
+        ]
+    )
+    
+    # Input Isi Detail Masukan
+    isi_pesan = st.text_area(
+        "Detail Keluhan / Kritik / Saran:", 
+        placeholder="Tuliskan secara detail dan jelas masukan Anda demi penyempurnaan platform GENTALA ke depan..."
+    )
+    
+    # Tombol Kirim di dalam Form
+    submit_button = st.form_submit_button(label="🚀 Kirim Umpan Balik")
+
+# 3. Logika Aksi Setelah Tombol Diklik
+if submit_button:
+    # Validasi: Isi pesan wajib diisi, tidak boleh kosong
+    if not isi_pesan.strip():
+        st.error("❌ Mohon maaf, kolom detail keluhan atau saran wajib diisi agar kami dapat mengevaluasinya.")
+    else:
+        try:
+            # A. Membuat stempel waktu otomatis (Waktu Indonesia Tengah / WITA)
+            waktu_sekarang = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            
+            # B. Validasi jika nama kosong atau hanya spasi, otomatis ubah jadi "Anonim"
+            nama_fix = nama_pengirim.strip() if nama_pengirim.strip() != "" else "Anonim"
+            
+            # C. Menyusun data menjadi baris list
+            data_baru = [waktu_sekarang, nama_fix, kategori_feedback, isi_pesan]
+            
+            # D. Memanggil secara spesifik TAB bernama "Pengaduan" di Google Sheets Dokter
+            nama_worksheet_pengaduan = sh.worksheet("Pengaduan")
+            
+            # E. Memasukkan data ke baris paling bawah pada Tab Pengaduan
+            nama_worksheet_pengaduan.append_row(data_baru)
+            
+            # Jika berhasil, tampilkan pesan sukses
+            st.success("✅ Terima kasih! Umpan balik Anda telah direkam dengan aman ke database internal Puskesmas Batu Tangga.")
+            st.balloons() # Efek balon pelengkap biar interaktif di layar pengguna
+            
+        except Exception as e:
+            # Jika koneksi database Sheets Dokter bermasalah, beri tahu pengguna
+            st.error(f"❌ Terjadi kendala saat mengirim data ke server. Pastikan Tab 'Pengaduan' sudah dibuat di Google Sheets Anda. (Error: {e})")
+
+# =========================================================================
+# BAGIAN FOOTER / KONTAK UTAMA (BISA DILETAKKAN DI BAWAH FORM INI)
+# =========================================================================
 
 # Menambahkan footer sederhana
 st.markdown("---")
