@@ -61,6 +61,34 @@ Aplikasi ini dirancang untuk memudahkan tenaga kesehatan dalam melakukan skrinin
 
 st.info("Gunakan menu di sebelah kiri untuk berpindah halaman.")
 
+# --- BAGIAN FOOTER / KONTAK BANTUAN ---
+st.markdown("---")  # Membuat garis pembatas horizontal
+
+# Membuat judul bagian bantuan
+st.markdown("### 📞 Pusat Bantuan & Layanan Informasi")
+st.write(
+    "Jika Anda mengalami kendala teknis, kesalahan input data, atau memerlukan informasi lebih lanjut "
+    "mengenai sistem GENTALA, silakan hubungi tim penanggung jawab melalui jalur di bawah ini:"
+)
+
+# Membagi menjadi 2 kolom untuk WhatsApp dan Email
+col_wa, col_email = st.columns(2)
+
+with col_wa:
+    # Menggunakan komponen st.info agar tampilannya berbentuk card berwarna biru muda yang rapi
+    st.info(
+        "6282157263167 🟢 WhatsApp Hotline\n\n"
+        "Hubungi admin GENTALA untuk respon cepat:\n\n"
+        "[💬 Chat WhatsApp Klik Disini](https://wa.me/6282157263167)"  # Ganti XXXXXXXXXX dengan nomor HP (awali dengan 62, tanpa angka 0)
+    )
+
+with col_email:
+    st.info(
+        "Aflinbihar0@gamil.com ✉️ Email Resmi\n\n"
+        "Kirimkan surat atau laporan kendala tertulis:\n\n"
+        "[📧 Kirim Email Klik Disini](mailto:email.puskesmas@domain.com)"  # Ganti dengan email resmi Puskesmas/Inovasi Dokter
+    )
+
 # Menambahkan footer sederhana
 st.markdown("---")
-st.caption(f"© 2026 Grow.TrackID - Puskesmas Batu Tangga | Logged in as: dr. Aflin Bihar")
+st.caption(f"© 2026 Grow.TrackID - Puskesmas Batu Tangga | Crtd By: dr. Aflin Bihar")
