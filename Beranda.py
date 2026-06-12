@@ -1,6 +1,5 @@
 import streamlit as st
 import gspread
-import base64
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 
@@ -62,34 +61,28 @@ Aplikasi ini dirancang untuk memudahkan tenaga kesehatan dalam melakukan skrinin
 st.info("Gunakan menu di sebelah kiri untuk berpindah halaman.")
 
 # ==========================================
-# 3. BAGIAN EMBED MANUAL BOOK (METODE B)
+# 3. BAGIAN DOWNLOAD MANUAL BOOK (METODE A)
 # ==========================================
 st.markdown("---")
 st.markdown("### 📖 Buku Panduan Pengoperasian (Manual Book) GENTALA")
 st.write(
-    "Guna memudahkan kader posyandu dan tenaga kesehatan dalam mengoperasikan sistem, "
-    "berikut adalah modul panduan langkah demi langkah yang dapat dibaca secara langsung:"
+    "Untuk memudahkan Anda dalam memahami seluruh alur fitur Skrining Gizi, Skrining Mental, "
+    "dan Telekonsultasi, kami telah menyediakan Buku Panduan Resmi GENTALA dalam format PDF."
 )
 
 # Membaca file PDF lokal dari folder repository GitHub Dokter
 try:
-    with open("manual_book_gentala.pdf", "rb") as f:
-        base64_pdf = base64.b64encode(f.read()).decode('utf-8')
+    with open("manual_book_gentala.pdf", "rb") as pdf_file:
+        PDFbyte = pdf_file.read()
     
-    # Membuat komponen HTML iframe untuk menampilkan PDF secara interaktif
-    pdf_display = f'''
-        <iframe 
-            src="data:application/pdf;base64,{base64_pdf}" 
-            width="100%" 
-            height="700px" 
-            type="application/pdf"
-            style="border: 1px solid #e2e8f0; border-radius: 8px;">
-        </iframe>
-    '''
-    
-    # Menampilkan file ke layar Streamlit
-    st.markdown(pdf_display, unsafe_allow_html=True)
-
+    # Membuat tombol unduh yang estetik dan mencolok
+    st.download_button(
+        label="📥 Unduh Buku Panduan GENTALA (PDF)",
+        data=PDFbyte,
+        file_name="Manual_Book_GENTALA.pdf",
+        mime="application/pdf",
+        help="Klik di sini untuk mengunduh buku panduan lengkap penggunaan aplikasi"
+    )
 except FileNotFoundError:
     # Antisipasi jika file PDF belum di-upload ke GitHub atau salah ketik nama file
     st.warning("⚠️ File 'manual_book_gentala.pdf' belum ditemukan di sistem server GitHub Anda. Pastikan file telah dimasukkan ke folder yang sama dengan Beranda.py.")
