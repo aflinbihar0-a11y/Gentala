@@ -1,5 +1,6 @@
 import streamlit as st
 import gspread
+import base64
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 
@@ -28,8 +29,7 @@ def init_connection():
         )
         client = gspread.authorize(creds)
         
-        # 💡 PERBAIKAN: Membuka file Spreadsheet utama secara utuh (tanpa mengunci .sheet1)
-        # agar kita bisa mengakses tab lain seperti tab "Pengaduan"
+        # Membuka file Spreadsheet utama secara utuh
         return client.open("GrowTrack Database")
     except Exception as e:
         return None
@@ -40,7 +40,7 @@ spreadsheet = init_connection()
 # ==========================================
 # 2. TAMPILAN UTAMA (BERANDA)
 # ==========================================
-st.title("🏥 Selamat Datang di GENTALA - Gerakan Terpadu Skrining Gizi, Mental, & Telekonsultasi Anak- Dewasa")
+st.title("🏥 Selamat Datang di GENTALA - Gerakan Terpadu Skrining Gizi, Mental, & Telekonsultasi Anak-Dewasa")
 st.subheader("Inovasi Program Puskesmas Batu Tangga")
 
 # Informasi Status Koneksi di Sidebar
@@ -61,7 +61,42 @@ Aplikasi ini dirancang untuk memudahkan tenaga kesehatan dalam melakukan skrinin
 
 st.info("Gunakan menu di sebelah kiri untuk berpindah halaman.")
 
-# --- BAGIAN FOOTER / KONTAK BANTUAN ---
+# ==========================================
+# 3. BAGIAN EMBED MANUAL BOOK (METODE B)
+# ==========================================
+st.markdown("---")
+st.markdown("### 📖 Buku Panduan Pengoperasian (Manual Book) GENTALA")
+st.write(
+    "Guna memudahkan kader posyandu dan tenaga kesehatan dalam mengoperasikan sistem, "
+    "berikut adalah modul panduan langkah demi langkah yang dapat dibaca secara langsung:"
+)
+
+# Membaca file PDF lokal dari folder repository GitHub Dokter
+try:
+    with open("manual_book_gentala.pdf", "rb") as f:
+        base64_pdf = base64.b64encode(f.read()).decode('utf-8')
+    
+    # Membuat komponen HTML iframe untuk menampilkan PDF secara interaktif
+    pdf_display = f'''
+        <iframe 
+            src="data:application/pdf;base64,{base64_pdf}" 
+            width="100%" 
+            height="700px" 
+            type="application/pdf"
+            style="border: 1px solid #e2e8f0; border-radius: 8px;">
+        </iframe>
+    '''
+    
+    # Menampilkan file ke layar Streamlit
+    st.markdown(pdf_display, unsafe_allow_html=True)
+
+except FileNotFoundError:
+    # Antisipasi jika file PDF belum di-upload ke GitHub atau salah ketik nama file
+    st.warning("⚠️ File 'manual_book_gentala.pdf' belum ditemukan di sistem server GitHub Anda. Pastikan file telah dimasukkan ke folder yang sama dengan Beranda.py.")
+
+# ==========================================
+# 4. BAGIAN FOOTER / KONTAK BANTUAN
+# ==========================================
 st.markdown("---")  # Membuat garis pembatas horizontal
 
 # Membuat judul bagian bantuan
@@ -88,7 +123,9 @@ with col_email:
         "[📧 Kirim Email Klik Disini](mailto:Aflinbihar0@gmail.com)"
     )
 
-# --- BAGIAN LAYANAN PENGADUAN & SARAN ---
+# ==========================================
+# 5. BAGIAN LAYANAN PENGADUAN & SARAN
+# ==========================================
 st.markdown("---") # Garis pembatas horizontal
 
 # 1. Judul dan Sub-judul Bagian Pengaduan
@@ -146,7 +183,7 @@ if submit_button:
                 # C. Menyusun data menjadi baris list
                 data_baru = [waktu_sekarang, nama_fix, kategori_feedback, isi_pesan]
                 
-                # 💡 PERBAIKAN: Memanggil secara spesifik TAB bernama "Pengaduan" dari objek spreadsheet
+                # D. Memanggil secara spesifik TAB bernama "Pengaduan" dari objek spreadsheet
                 nama_worksheet_pengaduan = spreadsheet.worksheet("Pengaduan")
                 
                 # E. Memasukkan data ke baris paling bawah pada Tab Pengaduan
@@ -157,7 +194,6 @@ if submit_button:
                 st.balloons() # Efek balon pelengkap biar interaktif di layar pengguna
                 
             except Exception as e:
-                # Jika koneksi database Sheets Dokter bermasalah, beri tahu pengguna
                 st.error(f"❌ Terjadi kendala saat mengirim data ke server. Pastikan Tab 'Pengaduan' sudah dibuat di Google Sheets Anda. (Error: {e})")
 
 # =========================================================================
