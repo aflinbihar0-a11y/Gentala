@@ -50,19 +50,51 @@ try:
     )
 
     # =========================================================================
-    # --- TAB 1: DASHBOARD GIZI & TUMBUH KEMBANG ANAK (LENGKAP: TB/U, BB/U, BB/TB)
+    # --- TAB 1: DASHBOARD GIZI & TUMBUH KEMBANG ANAK (DENGAN FILTER BULAN)
     # =========================================================================
     with tab_gizi:
         st.subheader("Analisis Status Gizi & Tren Kunjungan Anak")
+
+        # ---------------------------------------------------------------------
+        # FITUR FILTER DATA PER BULAN
+        # ---------------------------------------------------------------------
+        kolom_waktu = "Tanggal Periksa"
+        if kolom_waktu in df_gizi.columns and not df_gizi.empty:
+            # Buat kolom baru khusus untuk format Tahun-Bulan
+            df_gizi["Datetime"] = pd.to_datetime(
+                df_gizi[kolom_waktu], errors="coerce"
+            )
+            df_gizi["Bulan_Filter"] = df_gizi["Datetime"].dt.strftime("%Y-%m")
+
+            # Ambil daftar bulan unik yang ada di data (diurutkan dari terbaru)
+            daftar_bulan = ["Semua Data"] + sorted(
+                df_gizi["Bulan_Filter"].dropna().unique().tolist(), reverse=True
+            )
+        else:
+            daftar_bulan = ["Semua Data"]
+            df_gizi["Bulan_Filter"] = "Semua Data"
+
+        # Tampilkan pilihan selectbox ke pengguna
+        bulan_terpilih = st.selectbox("🗓️ Pilih Bulan Evaluasi:", daftar_bulan)
+
+        # Lakukan penyaringan (filtering) dataframe sesuai pilihan
+        if bulan_terpilih != "Semua Data":
+            df_gizi_visual = df_gizi[df_gizi["Bulan_Filter"] == bulan_terpilih]
+            st.info(
+                f"Menampilkan proporsi status gizi untuk periode: **{bulan_terpilih}**"
+            )
+        else:
+            df_gizi_visual = df_gizi.copy()
+
+        st.markdown("---")
 
         # Layout Utama: 2 Kolom (Kiri untuk Status Gizi, Kanan untuk Tren Kunjungan)
         kolom_kiri, kolom_kanan = st.columns([1.2, 1])
 
         # ---------------------------------------------------------------------
-        # KOLOM KIRI: STATUS GIZI ANTROPOMETRI (SUB-TAB: TB/U, BB/U, BB/TB)
+        # KOLOM KIRI: STATUS GIZI (MENGGUNAKAN DATA YANG SUDAH DIFILTER)
         # ---------------------------------------------------------------------
         with kolom_kiri:
-            # Sub-Tab Pilihan Indikator Antropometri
             subtab_tbu, subtab_bbu, subtab_bbtb = st.tabs(
                 [
                     "📏 TB/U (Stunting)",
@@ -71,18 +103,17 @@ try:
                 ]
             )
 
-            # --- A. INDIKATOR TB/U (Tinggi Badan menurut Umur) ---
+            # --- A. INDIKATOR TB/U ---
             with subtab_tbu:
-                st.markdown(
-                    "##### 🍩 Proporsi Status Tinggi Badan menurut Umur (TB/U)"
-                )
-                kolom_tbu = (
-                    "Status TB/U"  # Sesuaikan dengan nama kolom Google Sheets
-                )
+                st.markdown("##### 🍩 Proporsi Status TB/U")
+                kolom_tbu = "Status TB/U"
 
-                if kolom_tbu in df_gizi.columns and not df_gizi.empty:
+                if (
+                    kolom_tbu in df_gizi_visual.columns
+                    and not df_gizi_visual.empty
+                ):
                     hitung_tbu = (
-                        df_gizi[kolom_tbu].value_counts().reset_index()
+                        df_gizi_visual[kolom_tbu].value_counts().reset_index()
                     )
                     hitung_tbu.columns = ["Status Gizi", "Jumlah Anak"]
 
@@ -93,12 +124,12 @@ try:
                         hole=0.45,
                         color="Status Gizi",
                         color_discrete_map={
-                            "Sangat Pendek": "#DC2626",  # Merah
+                            "Sangat Pendek": "#DC2626",
                             "Sangat Pendek (Severely Stunted)": "#DC2626",
-                            "Pendek": "#60A5FA",  # Biru Muda
+                            "Pendek": "#60A5FA",
                             "Pendek (Stunted)": "#60A5FA",
-                            "Normal": "#2563EB",  # Biru Tua
-                            "Tinggi": "#10B981",  # Hijau
+                            "Normal": "#2563EB",
+                            "Tinggi": "#10B981",
                         },
                     )
                     fig_tbu.update_traces(
@@ -109,22 +140,19 @@ try:
                     )
                     st.plotly_chart(fig_tbu, use_container_width=True)
                 else:
-                    st.info(
-                        "Belum ada data atau kolom 'Status TB/U' tidak ditemukan."
-                    )
+                    st.warning("Data kosong atau kolom tidak ditemukan.")
 
-            # --- B. INDIKATOR BB/U (Berat Badan menurut Umur) ---
+            # --- B. INDIKATOR BB/U ---
             with subtab_bbu:
-                st.markdown(
-                    "##### 🍩 Proporsi Status Berat Badan menurut Umur (BB/U)"
-                )
-                kolom_bbu = (
-                    "Status BB/U"  # Sesuaikan dengan nama kolom Google Sheets
-                )
+                st.markdown("##### 🍩 Proporsi Status BB/U")
+                kolom_bbu = "Status BB/U"
 
-                if kolom_bbu in df_gizi.columns and not df_gizi.empty:
+                if (
+                    kolom_bbu in df_gizi_visual.columns
+                    and not df_gizi_visual.empty
+                ):
                     hitung_bbu = (
-                        df_gizi[kolom_bbu].value_counts().reset_index()
+                        df_gizi_visual[kolom_bbu].value_counts().reset_index()
                     )
                     hitung_bbu.columns = ["Status Gizi", "Jumlah Anak"]
 
@@ -135,12 +163,12 @@ try:
                         hole=0.45,
                         color="Status Gizi",
                         color_discrete_map={
-                            "Sangat Kurang": "#DC2626",  # Merah
+                            "Sangat Kurang": "#DC2626",
                             "Sangat Kurang (Severely Underweight)": "#DC2626",
-                            "Kurang": "#F59E0B",  # Kuning / Oranye
+                            "Kurang": "#F59E0B",
                             "Kurang (Underweight)": "#F59E0B",
-                            "Normal": "#2563EB",  # Biru
-                            "Risiko BB Lebih": "#10B981",  # Hijau
+                            "Normal": "#2563EB",
+                            "Risiko BB Lebih": "#10B981",
                         },
                     )
                     fig_bbu.update_traces(
@@ -151,22 +179,19 @@ try:
                     )
                     st.plotly_chart(fig_bbu, use_container_width=True)
                 else:
-                    st.info(
-                        "Belum ada data atau kolom 'Status BB/U' tidak ditemukan pada sheet data."
-                    )
+                    st.warning("Data kosong atau kolom tidak ditemukan.")
 
-            # --- C. INDIKATOR BB/TB (Berat Badan menurut Tinggi Badan) ---
+            # --- C. INDIKATOR BB/TB ---
             with subtab_bbtb:
-                st.markdown(
-                    "##### 🍩 Proporsi Status BB menurut TB/PB (BB/TB)"
-                )
-                kolom_bbtb = (
-                    "Status BB/TB"  # Sesuaikan dengan nama kolom Google Sheets
-                )
+                st.markdown("##### 🍩 Proporsi Status BB/TB")
+                kolom_bbtb = "Status BB/TB"
 
-                if kolom_bbtb in df_gizi.columns and not df_gizi.empty:
+                if (
+                    kolom_bbtb in df_gizi_visual.columns
+                    and not df_gizi_visual.empty
+                ):
                     hitung_bbtb = (
-                        df_gizi[kolom_bbtb].value_counts().reset_index()
+                        df_gizi_visual[kolom_bbtb].value_counts().reset_index()
                     )
                     hitung_bbtb.columns = ["Status Gizi", "Jumlah Anak"]
 
@@ -177,15 +202,15 @@ try:
                         hole=0.45,
                         color="Status Gizi",
                         color_discrete_map={
-                            "Gizi Buruk": "#7F1D1D",  # Merah Tua
+                            "Gizi Buruk": "#7F1D1D",
                             "Gizi Buruk (Severely Wasted)": "#7F1D1D",
-                            "Gizi Kurang": "#DC2626",  # Merah
+                            "Gizi Kurang": "#DC2626",
                             "Gizi Kurang (Wasted)": "#DC2626",
-                            "Gizi Baik": "#2563EB",  # Biru Utama
+                            "Gizi Baik": "#2563EB",
                             "Gizi Baik (Normal)": "#2563EB",
-                            "Berisiko Gizi Lebih": "#FBBF24",  # Kuning
-                            "Gizi Lebih": "#F59E0B",  # Oranye
-                            "Obesitas": "#9333EA",  # Ungu
+                            "Berisiko Gizi Lebih": "#FBBF24",
+                            "Gizi Lebih": "#F59E0B",
+                            "Obesitas": "#9333EA",
                         },
                     )
                     fig_bbtb.update_traces(
@@ -196,28 +221,20 @@ try:
                     )
                     st.plotly_chart(fig_bbtb, use_container_width=True)
                 else:
-                    st.info(
-                        "Belum ada data atau kolom 'Status BB/TB' tidak ditemukan pada sheet data."
-                    )
+                    st.warning("Data kosong atau kolom tidak ditemukan.")
 
         # ---------------------------------------------------------------------
         # KOLOM KANAN: TREN KUNJUNGAN PEMERIKSAAN GIZI
         # ---------------------------------------------------------------------
         with kolom_kanan:
             st.markdown("#### 📅 Tren Kunjungan Pemeriksaan Gizi")
-            kolom_waktu = "Tanggal Periksa"
 
             if kolom_waktu in df_gizi.columns and not df_gizi.empty:
-                df_tren = df_gizi.copy()
-                df_tren["Datetime"] = pd.to_datetime(
-                    df_tren[kolom_waktu], errors="coerce"
-                )
-                df_tren["Bulan"] = df_tren["Datetime"].dt.strftime("%Y-%m")
-
                 tren_bulanan = (
-                    df_tren["Bulan"].value_counts().sort_index().reset_index()
+                    df_gizi["Bulan_Filter"].value_counts().sort_index().reset_index()
                 )
                 tren_bulanan.columns = ["Bulan", "Jumlah Pemeriksaan"]
+                tren_bulanan = tren_bulanan[tren_bulanan["Bulan"] != "Semua Data"]
 
                 st.bar_chart(tren_bulanan.set_index("Bulan"))
             else:
