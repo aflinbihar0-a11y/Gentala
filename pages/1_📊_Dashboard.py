@@ -72,15 +72,33 @@ try:
             daftar_bulan = ["Semua Bulan"]
             df_gizi["Bulan_Filter"] = "Semua Bulan"
 
-        # Penanganan Filter Desa
-        # (Ubah 'Desa' jika di Google Sheets Dokter menggunakan nama lain, misal: 'Alamat' / 'Posyandu')
-        kolom_desa = "Desa"
-        if kolom_desa in df_gizi.columns and not df_gizi.empty:
-            daftar_desa = ["Semua Desa"] + sorted(
-                df_gizi[kolom_desa].astype(str).unique().tolist()
+        # ---------------------------------------------------------------------
+        # Penanganan Filter Desa (DISESUAIKAN DENGAN KOLOM 'Alamat' DI SHEET)
+        # ---------------------------------------------------------------------
+        kolom_desa = "Alamat"  # Match dengan Kolom C Google Sheets Dokter
+
+        # Daftar Desa Standar Puskesmas Batu Tangga
+        DAFTAR_DESA_DEFAULT = [
+            "Batu Tangga",
+            "Muara Hungi",
+            "Pembakulan",
+            "Nateh",
+            "Datar Batung",
+            "Desa Lainnya",
+        ]
+
+        if kolom_desa in df_gizi.columns and not df_gizi[kolom_desa].empty:
+            desa_dari_sheet = (
+                df_gizi[kolom_desa].astype(str).str.strip().unique().tolist()
+            )
+            # Gabungkan daftar standar dengan data yang ada di sheet tanpa duplikat
+            daftar_desa = list(
+                dict.fromkeys(
+                    ["Semua Desa"] + DAFTAR_DESA_DEFAULT + desa_dari_sheet
+                )
             )
         else:
-            daftar_desa = ["Semua Desa"]
+            daftar_desa = ["Semua Desa"] + DAFTAR_DESA_DEFAULT
 
         # Menampilkan Filter Berdampingan (2 Kolom)
         col_filter1, col_filter2 = st.columns(2)
@@ -103,7 +121,8 @@ try:
 
         if desa_terpilih != "Semua Desa" and kolom_desa in df_gizi_visual.columns:
             df_gizi_visual = df_gizi_visual[
-                df_gizi_visual[kolom_desa].astype(str) == desa_terpilih
+                df_gizi_visual[kolom_desa].astype(str).str.strip()
+                == desa_terpilih
             ]
 
         # Tampilkan Notifikasi Filter Aktif
@@ -254,14 +273,15 @@ try:
         with kolom_kanan:
             st.markdown("#### 📅 Tren Kunjungan Pemeriksaan Gizi")
 
-            # Jika desa dipilih, grafik tren hanya menampilkan kunjungan desa tersebut dari bulan ke bulan
+            # Jika desa dipilih, grafik tren hanya menampilkan kunjungan desa tersebut
             df_tren_desa = df_gizi.copy()
             if (
                 desa_terpilih != "Semua Desa"
                 and kolom_desa in df_tren_desa.columns
             ):
                 df_tren_desa = df_tren_desa[
-                    df_tren_desa[kolom_desa].astype(str) == desa_terpilih
+                    df_tren_desa[kolom_desa].astype(str).str.strip()
+                    == desa_terpilih
                 ]
 
             if kolom_waktu in df_tren_desa.columns and not df_tren_desa.empty:
