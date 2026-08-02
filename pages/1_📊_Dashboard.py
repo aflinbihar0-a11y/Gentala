@@ -50,41 +50,66 @@ try:
     )
 
     # =========================================================================
-    # --- TAB 1: DASHBOARD GIZI & TUMBUH KEMBANG ANAK (DENGAN FILTER BULAN)
+    # --- TAB 1: DASHBOARD GIZI & TUMBUH KEMBANG ANAK (FILTER BULAN & DESA)
     # =========================================================================
     with tab_gizi:
         st.subheader("Analisis Status Gizi & Tren Kunjungan Anak")
 
         # ---------------------------------------------------------------------
-        # FITUR FILTER DATA PER BULAN
+        # FITUR FILTER MULTI-INDIKATOR (BULAN & DESA)
         # ---------------------------------------------------------------------
+        # Penanganan Filter Bulan
         kolom_waktu = "Tanggal Periksa"
         if kolom_waktu in df_gizi.columns and not df_gizi.empty:
-            # Buat kolom baru khusus untuk format Tahun-Bulan
             df_gizi["Datetime"] = pd.to_datetime(
                 df_gizi[kolom_waktu], errors="coerce"
             )
             df_gizi["Bulan_Filter"] = df_gizi["Datetime"].dt.strftime("%Y-%m")
-
-            # Ambil daftar bulan unik yang ada di data (diurutkan dari terbaru)
-            daftar_bulan = ["Semua Data"] + sorted(
+            daftar_bulan = ["Semua Bulan"] + sorted(
                 df_gizi["Bulan_Filter"].dropna().unique().tolist(), reverse=True
             )
         else:
-            daftar_bulan = ["Semua Data"]
-            df_gizi["Bulan_Filter"] = "Semua Data"
+            daftar_bulan = ["Semua Bulan"]
+            df_gizi["Bulan_Filter"] = "Semua Bulan"
 
-        # Tampilkan pilihan selectbox ke pengguna
-        bulan_terpilih = st.selectbox("🗓️ Pilih Bulan Evaluasi:", daftar_bulan)
-
-        # Lakukan penyaringan (filtering) dataframe sesuai pilihan
-        if bulan_terpilih != "Semua Data":
-            df_gizi_visual = df_gizi[df_gizi["Bulan_Filter"] == bulan_terpilih]
-            st.info(
-                f"Menampilkan proporsi status gizi untuk periode: **{bulan_terpilih}**"
+        # Penanganan Filter Desa
+        # (Ubah 'Desa' jika di Google Sheets Dokter menggunakan nama lain, misal: 'Alamat' / 'Posyandu')
+        kolom_desa = "Desa"
+        if kolom_desa in df_gizi.columns and not df_gizi.empty:
+            daftar_desa = ["Semua Desa"] + sorted(
+                df_gizi[kolom_desa].astype(str).unique().tolist()
             )
         else:
-            df_gizi_visual = df_gizi.copy()
+            daftar_desa = ["Semua Desa"]
+
+        # Menampilkan Filter Berdampingan (2 Kolom)
+        col_filter1, col_filter2 = st.columns(2)
+
+        with col_filter1:
+            bulan_terpilih = st.selectbox(
+                "🗓️ Pilih Bulan Evaluasi:", daftar_bulan
+            )
+
+        with col_filter2:
+            desa_terpilih = st.selectbox("🏡 Pilih Wilayah / Desa:", daftar_desa)
+
+        # Proses Penyaringan Data Frame
+        df_gizi_visual = df_gizi.copy()
+
+        if bulan_terpilih != "Semua Bulan":
+            df_gizi_visual = df_gizi_visual[
+                df_gizi_visual["Bulan_Filter"] == bulan_terpilih
+            ]
+
+        if desa_terpilih != "Semua Desa" and kolom_desa in df_gizi_visual.columns:
+            df_gizi_visual = df_gizi_visual[
+                df_gizi_visual[kolom_desa].astype(str) == desa_terpilih
+            ]
+
+        # Tampilkan Notifikasi Filter Aktif
+        st.info(
+            f"📌 Menampilkan data untuk periode: **{bulan_terpilih}** | Wilayah: **{desa_terpilih}** (Total: {len(df_gizi_visual)} Anak)"
+        )
 
         st.markdown("---")
 
@@ -92,7 +117,7 @@ try:
         kolom_kiri, kolom_kanan = st.columns([1.2, 1])
 
         # ---------------------------------------------------------------------
-        # KOLOM KIRI: STATUS GIZI (MENGGUNAKAN DATA YANG SUDAH DIFILTER)
+        # KOLOM KIRI: STATUS GIZI (SESUAI HASIL FILTER BULAN & DESA)
         # ---------------------------------------------------------------------
         with kolom_kiri:
             subtab_tbu, subtab_bbu, subtab_bbtb = st.tabs(
@@ -140,7 +165,7 @@ try:
                     )
                     st.plotly_chart(fig_tbu, use_container_width=True)
                 else:
-                    st.warning("Data kosong atau kolom tidak ditemukan.")
+                    st.warning("Data kosong untuk kombinasi filter ini.")
 
             # --- B. INDIKATOR BB/U ---
             with subtab_bbu:
@@ -179,7 +204,7 @@ try:
                     )
                     st.plotly_chart(fig_bbu, use_container_width=True)
                 else:
-                    st.warning("Data kosong atau kolom tidak ditemukan.")
+                    st.warning("Data kosong untuk kombinasi filter ini.")
 
             # --- C. INDIKATOR BB/TB ---
             with subtab_bbtb:
@@ -221,26 +246,39 @@ try:
                     )
                     st.plotly_chart(fig_bbtb, use_container_width=True)
                 else:
-                    st.warning("Data kosong atau kolom tidak ditemukan.")
+                    st.warning("Data kosong untuk kombinasi filter ini.")
 
         # ---------------------------------------------------------------------
-        # KOLOM KANAN: TREN KUNJUNGAN PEMERIKSAAN GIZI
+        # KOLOM KANAN: TREN KUNJUNGAN (SESUAI DESA YANG DIPILIH)
         # ---------------------------------------------------------------------
         with kolom_kanan:
             st.markdown("#### 📅 Tren Kunjungan Pemeriksaan Gizi")
 
-            if kolom_waktu in df_gizi.columns and not df_gizi.empty:
+            # Jika desa dipilih, grafik tren hanya menampilkan kunjungan desa tersebut dari bulan ke bulan
+            df_tren_desa = df_gizi.copy()
+            if (
+                desa_terpilih != "Semua Desa"
+                and kolom_desa in df_tren_desa.columns
+            ):
+                df_tren_desa = df_tren_desa[
+                    df_tren_desa[kolom_desa].astype(str) == desa_terpilih
+                ]
+
+            if kolom_waktu in df_tren_desa.columns and not df_tren_desa.empty:
                 tren_bulanan = (
-                    df_gizi["Bulan_Filter"].value_counts().sort_index().reset_index()
+                    df_tren_desa["Bulan_Filter"]
+                    .value_counts()
+                    .sort_index()
+                    .reset_index()
                 )
                 tren_bulanan.columns = ["Bulan", "Jumlah Pemeriksaan"]
-                tren_bulanan = tren_bulanan[tren_bulanan["Bulan"] != "Semua Data"]
+                tren_bulanan = tren_bulanan[
+                    tren_bulanan["Bulan"] != "Semua Bulan"
+                ]
 
                 st.bar_chart(tren_bulanan.set_index("Bulan"))
             else:
-                st.info(
-                    "Belum ada data atau kolom 'Tanggal Periksa' tidak ditemukan."
-                )
+                st.info("Belum ada data kunjungan untuk wilayah ini.")
 
     # =========================================================================
     # --- TAB 2: DASHBOARD KESEHATAN JIWA ---
