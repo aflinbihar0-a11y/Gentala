@@ -63,7 +63,43 @@
 
 <script>
     // Nanti ganti dengan URL Google Apps Script milik Dokter
-    const SCRIPT_URL = "PASANG_URL_GOOGLE_APPS_SCRIPT_DI_SINI";
+    const SCRIPT_URL = "function doPost(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // Langsung menargetkan Sheet 2 (fitur skrining gizi)
+    var sheet = ss.getSheetByName("Sheet 2");
+
+    // Membaca data JSON yang dikirim dari PWA Gentala
+    var contents = JSON.parse(e.postData.contents);
+
+    var timestamp = contents.timestamp || new Date().toLocaleString("id-ID");
+    var namaAnak = contents.nama_anak || "-";
+    var alamat = contents.alamat || "-";
+    var tb = contents.tb || 0;
+    var bb = contents.bb || 0;
+
+    // Menambahkan baris data baru ke paling bawah Sheet 2
+    sheet.appendRow([
+      timestamp,
+      namaAnak,
+      alamat,
+      tb,
+      bb
+    ]);
+
+    return ContentService.createTextOutput(JSON.stringify({
+      "status": "success",
+      "message": "Data skrining gizi berhasil disimpan ke Sheet 2!"
+    })).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      "status": "error",
+      "message": error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}";
 
     function updateCount() {
         let dataLokal = JSON.parse(localStorage.getItem("gentala_offline_data") || "[]");
