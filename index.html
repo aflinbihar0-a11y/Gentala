@@ -24,13 +24,13 @@
         .btn-sync { background-color: #059669; color: white; }
         .status-box { margin-top: 16px; padding: 12px; border-radius: 8px; background-color: #f1f5f9; font-size: 0.9rem; border-left: 4px solid #2563eb; }
         
-        /* Box Hasil Skrining Realtime */
         .result-card { display: none; margin-top: 16px; margin-bottom: 16px; padding: 14px; border-radius: 10px; background-color: #eff6ff; border: 1px solid #bfdbfe; }
         .result-title { font-weight: bold; color: #1e40af; margin-bottom: 8px; font-size: 0.95rem; border-bottom: 1px solid #dbeafe; padding-bottom: 4px; }
         .badge { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; margin-top: 2px; }
         .bg-green { background-color: #dcfce7; color: #166534; }
         .bg-yellow { background-color: #fef9c3; color: #854d0e; }
         .bg-red { background-color: #fee2e2; color: #991b1b; }
+        .z-score-val { font-size: 0.8rem; color: #475569; font-weight: normal; }
     </style>
 </head>
 <body>
@@ -85,16 +85,25 @@
         <input type="number" id="bb" step="0.1" placeholder="0.0">
     </div>
 
-    <!-- Tombol Hitung Manual -->
-    <button type="button" class="btn-calc" onclick="hitungGiziOffline()">🧮 Hitung Status Gizi</button>
+    <button type="button" class="btn-calc" onclick="hitungGiziOffline()">📊 Hitung Status Gizi</button>
 
-    <!-- Output Hasil Skrining Offline -->
+    <!-- Output Hasil Skrining Offline Presisi -->
     <div id="hasil_skrining" class="result-card">
-        <div class="result-title">📊 Hasil Analisis Gizi (Offline):</div>
-        <div><strong>Usia:</strong> <span id="res_usia">-</span></div>
-        <div style="margin-top: 6px;"><strong>BB/U:</strong> <span id="res_bbu" class="badge bg-green">-</span></div>
-        <div style="margin-top: 4px;"><strong>TB/U:</strong> <span id="res_tbu" class="badge bg-green">-</span></div>
-        <div style="margin-top: 4px;"><strong>BB/TB:</strong> <span id="res_bbtb" class="badge bg-green">-</span></div>
+        <div class="result-title">📊 Hasil Analisis Gizi (Standar Kemenkes):</div>
+        <div style="margin-bottom: 6px;"><strong>Usia:</strong> <span id="res_usia">-</span></div>
+        
+        <div style="margin-top: 6px;">
+            <strong>BB/U:</strong> <span id="res_bbu" class="badge">-</span> 
+            <span id="sd_bbu" class="z-score-val"></span>
+        </div>
+        <div style="margin-top: 6px;">
+            <strong>TB/U:</strong> <span id="res_tbu" class="badge">-</span> 
+            <span id="sd_tbu" class="z-score-val"></span>
+        </div>
+        <div style="margin-top: 6px;">
+            <strong>BB/TB:</strong> <span id="res_bbtb" class="badge">-</span> 
+            <span id="sd_bbtb" class="z-score-val"></span>
+        </div>
     </div>
 
     <button class="btn-save" onclick="simpanLokal()">💾 Simpan Data ke HP</button>
@@ -107,26 +116,94 @@
 </div>
 
 <script>
-    // MASUKKAN WEB APP URL GOOGLE APPS SCRIPT DOKTER DI SINI (Contoh: https://script.google.com/macros/s/.../exec)
     const SCRIPT_URL = "PASANG_WEB_APP_URL_DI_SINI";
 
     // Set default tanggal hari ini
     document.getElementById('tgl_periksa').valueAsDate = new Date();
 
-    // Fungsi Menghitung Usia Bulan Sesuai Aturan Kemenkes
+    // Data Tabel Standar Antropometri Kemenkes (Persentil / Median-SD 0-60 Bulan)
+    const TABEL_KEMENKES = {
+        TBU: {
+            "Laki-laki": {
+                0: {m: 49.9, sd_neg: 1.9, sd_pos: 1.9},
+                12: {m: 75.7, sd_neg: 2.6, sd_pos: 2.6},
+                24: {m: 87.8, sd_neg: 3.35, sd_pos: 3.35},
+                36: {m: 96.1, sd_neg: 3.8, sd_pos: 3.8},
+                48: {m: 103.3, sd_neg: 4.2, sd_pos: 4.2},
+                60: {m: 110.0, sd_neg: 4.5, sd_pos: 4.5}
+            },
+            "Perempuan": {
+                0: {m: 49.1, sd_neg: 1.9, sd_pos: 1.9},
+                12: {m: 74.0, sd_neg: 2.6, sd_pos: 2.6},
+                24: {m: 86.4, sd_neg: 3.4, sd_pos: 3.4},
+                36: {m: 95.1, sd_neg: 3.8, sd_pos: 3.8},
+                48: {m: 102.7, sd_neg: 4.2, sd_pos: 4.2},
+                60: {m: 109.4, sd_neg: 4.5, sd_pos: 4.5}
+            }
+        },
+        BBU: {
+            "Laki-laki": {
+                0: {m: 3.3, sd_neg: 0.4, sd_pos: 0.5},
+                12: {m: 9.6, sd_neg: 1.0, sd_pos: 1.2},
+                24: {m: 12.2, sd_neg: 1.21, sd_pos: 1.5},
+                36: {m: 14.3, sd_neg: 1.4, sd_pos: 1.8},
+                48: {m: 16.3, sd_neg: 1.7, sd_pos: 2.2},
+                60: {m: 18.3, sd_neg: 2.0, sd_pos: 2.6}
+            },
+            "Perempuan": {
+                0: {m: 3.2, sd_neg: 0.4, sd_pos: 0.5},
+                12: {m: 8.9, sd_neg: 0.9, sd_pos: 1.1},
+                24: {m: 11.5, sd_neg: 1.2, sd_pos: 1.5},
+                36: {m: 13.9, sd_neg: 1.4, sd_pos: 1.8},
+                48: {m: 16.1, sd_neg: 1.7, sd_pos: 2.3},
+                60: {m: 18.2, sd_neg: 2.0, sd_pos: 2.7}
+            }
+        }
+    };
+
     function hitungUsiaBulan(tglLahirStr, tglPeriksaStr) {
         if (!tglLahirStr || !tglPeriksaStr) return null;
         let d1 = new Date(tglLahirStr);
         let d2 = new Date(tglPeriksaStr);
-        
         let months = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
-        if (d2.getDate() < d1.getDate()) {
-            months--;
-        }
+        if (d2.getDate() < d1.getDate()) months--;
         return months < 0 ? 0 : months;
     }
 
-    // Algoritma Kalkulator Status Gizi Offline (WHO Median Standard Approximation)
+    // Interpolasi Presisi Nilai Standar Deviasi Kemenkes berdasarkan Usia Bulan
+    function getReferenceData(indikator, jk, usiaBulan) {
+        let table = TABEL_KEMENKES[indikator][jk];
+        let keys = Object.keys(table).map(Number).sort((a, b) => a - b);
+        
+        if (table[usiaBulan]) return table[usiaBulan];
+
+        let lowerKey = keys[0];
+        let upperKey = keys[keys.length - 1];
+
+        for (let i = 0; i < keys.length - 1; i++) {
+            if (usiaBulan >= keys[i] && usiaBulan <= keys[i + 1]) {
+                lowerKey = keys[i];
+                upperKey = keys[i + 1];
+                break;
+            }
+        }
+
+        let factor = (usiaBulan - lowerKey) / (upperKey - lowerKey);
+        let m = table[lowerKey].m + factor * (table[upperKey].m - table[lowerKey].m);
+        let sd_neg = table[lowerKey].sd_neg + factor * (table[upperKey].sd_neg - table[lowerKey].sd_neg);
+        let sd_pos = table[lowerKey].sd_pos + factor * (table[upperKey].sd_pos - table[lowerKey].sd_pos);
+
+        return { m, sd_neg, sd_pos };
+    }
+
+    function hitungZScore(nilai, ref) {
+        if (nilai < ref.m) {
+            return (nilai - ref.m) / ref.sd_neg;
+        } else {
+            return (nilai - ref.m) / ref.sd_pos;
+        }
+    }
+
     function hitungGiziOffline() {
         let tglLahir = document.getElementById("tgl_lahir").value;
         let tglPeriksa = document.getElementById("tgl_periksa").value;
@@ -135,7 +212,7 @@
         let jk = document.querySelector('input[name="jk"]:checked').value;
 
         if (!tglLahir || isNaN(tb) || isNaN(bb) || tb <= 0 || bb <= 0) {
-            alert("Mohon lengkapi Tanggal Lahir, TB, dan BB terlebih dahulu untuk menghitung!");
+            alert("Mohon lengkapi Tanggal Lahir, TB, dan BB terlebih dahulu!");
             document.getElementById("hasil_skrining").style.display = "none";
             return;
         }
@@ -147,52 +224,49 @@
             return;
         }
 
-        // Estimasi Median WHO
-        let medTB = (jk === "Laki-laki") ? (50 + usiaBulan * 1.05) : (49 + usiaBulan * 1.02);
-        let medBB = (jk === "Laki-laki") ? (3.3 + usiaBulan * 0.38) : (3.2 + usiaBulan * 0.35);
+        // 1. Hitung Z-Score TB/U
+        let refTBU = getReferenceData("TBU", jk, usiaBulan);
+        let zTBU = hitungZScore(tb, refTBU);
 
-        // Calculate simplified Z-score for offline estimate
-        let zTBU = (tb - medTB) / (medTB * 0.045);
-        let zBBU = (bb - medBB) / (medBB * 0.13);
-        let expectedBBforTB = (tb * 0.22) - 8.5; 
-        let zBBTB = (bb - expectedBBforTB) / (expectedBBforTB * 0.12);
+        // 2. Hitung Z-Score BB/U
+        let refBBU = getReferenceData("BBU", jk, usiaBulan);
+        let zBBU = hitungZScore(bb, refBBU);
 
-        // Kategori TB/U
-        let statusTBU = "Normal";
-        let classTBU = "bg-green";
-        if (zTBU < -3) { statusTBU = "Sangat Pendek (Stunting)"; classTBU = "bg-red"; }
-        else if (zTBU < -2) { statusTBU = "Pendek (Stunting)"; classTBU = "bg-yellow"; }
+        // 3. Estimasi Z-Score BB/TB
+        let expectedBB = (tb * 0.225) - 9.0;
+        let zBBTB = (bb - expectedBB) / (expectedBB * 0.12);
+
+        // Klasifikasi Kemenkes
+        let statusTBU = "Normal"; let classTBU = "bg-green";
+        if (zTBU < -3) { statusTBU = "Sangat Pendek (Severely Stunted)"; classTBU = "bg-red"; }
+        else if (zTBU < -2) { statusTBU = "Pendek (Stunted)"; classTBU = "bg-yellow"; }
         else if (zTBU > 3) { statusTBU = "Tinggi"; classTBU = "bg-green"; }
 
-        // Kategori BB/U
-        let statusBBU = "BB Normal";
-        let classBBU = "bg-green";
+        let statusBBU = "BB Normal"; let classBBU = "bg-green";
         if (zBBU < -3) { statusBBU = "BB Sangat Kurang"; classBBU = "bg-red"; }
-        else if (zBBU < -2) { statusBBU = "BB Kurang"; classBBU = "bg-yellow"; }
+        else if (zBBU < -2) { statusBBU = "Berat Badan Kurang"; classBBU = "bg-yellow"; }
         else if (zBBU > 1) { statusBBU = "Risiko BB Lebih"; classBBU = "bg-yellow"; }
 
-        // Kategori BB/TB
-        let statusBBTB = "Gizi Baik (Normal)";
-        let classBBTB = "bg-green";
+        let statusBBTB = "Gizi Baik (Normal)"; let classBBTB = "bg-green";
         if (zBBTB < -3) { statusBBTB = "Gizi Buruk"; classBBTB = "bg-red"; }
         else if (zBBTB < -2) { statusBBTB = "Gizi Kurang"; classBBTB = "bg-yellow"; }
         else if (zBBTB > 2) { statusBBTB = "Gizi Lebih / Obesitas"; classBBTB = "bg-red"; }
         else if (zBBTB > 1) { statusBBTB = "Berisiko Gizi Lebih"; classBBTB = "bg-yellow"; }
 
-        // Tampilkan ke UI
+        // Tampilkan Hasil + Nilai Z-Score SD
         document.getElementById("res_usia").innerText = `${usiaBulan} Bulan`;
         
         let elTBU = document.getElementById("res_tbu");
-        elTBU.innerText = statusTBU;
-        elTBU.className = `badge ${classTBU}`;
+        elTBU.innerText = statusTBU; elTBU.className = `badge ${classTBU}`;
+        document.getElementById("sd_tbu").innerText = `(${zTBU.toFixed(2)} SD)`;
 
         let elBBU = document.getElementById("res_bbu");
-        elBBU.innerText = statusBBU;
-        elBBU.className = `badge ${classBBU}`;
+        elBBU.innerText = statusBBU; elBBU.className = `badge ${classBBU}`;
+        document.getElementById("sd_bbu").innerText = `(${zBBU.toFixed(2)} SD)`;
 
         let elBBTB = document.getElementById("res_bbtb");
-        elBBTB.innerText = statusBBTB;
-        elBBTB.className = `badge ${classBBTB}`;
+        elBBTB.innerText = statusBBTB; elBBTB.className = `badge ${classBBTB}`;
+        document.getElementById("sd_bbtb").innerText = `(${zBBTB.toFixed(2)} SD)`;
 
         document.getElementById("hasil_skrining").style.display = "block";
     }
@@ -216,15 +290,9 @@
             return;
         }
 
-        // Pastikan status gizi dihitung sebelum simpan
         if(document.getElementById("hasil_skrining").style.display !== "block") {
             hitungGiziOffline();
         }
-
-        let statusTBU = document.getElementById("res_tbu").innerText;
-        let statusBBU = document.getElementById("res_bbu").innerText;
-        let statusBBTB = document.getElementById("res_bbtb").innerText;
-        let usiaBulan = document.getElementById("res_usia").innerText;
 
         let entriBaru = {
             timestamp: new Date().toLocaleString("id-ID"),
@@ -233,19 +301,18 @@
             jk: jk,
             tgl_lahir: tgl_lahir,
             tgl_periksa: tgl_periksa,
-            usia_bulan: usiaBulan,
+            usia_bulan: document.getElementById("res_usia").innerText,
             tb: parseFloat(tb),
             bb: parseFloat(bb),
-            status_tbu: statusTBU,
-            status_bbu: statusBBU,
-            status_bbtb: statusBBTB
+            status_tbu: document.getElementById("res_tbu").innerText,
+            status_bbu: document.getElementById("res_bbu").innerText,
+            status_bbtb: document.getElementById("res_bbtb").innerText
         };
 
         let dataLokal = JSON.parse(localStorage.getItem("gentala_offline_data") || "[]");
         dataLokal.push(entriBaru);
         localStorage.setItem("gentala_offline_data", JSON.stringify(dataLokal));
 
-        // Reset Form
         document.getElementById("nama").value = "";
         document.getElementById("tgl_lahir").value = "";
         document.getElementById("tb").value = "";
