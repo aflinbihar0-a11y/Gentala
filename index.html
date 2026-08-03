@@ -121,7 +121,7 @@
     // Set default tanggal hari ini
     document.getElementById('tgl_periksa').valueAsDate = new Date();
 
-    // Data Tabel Standar Antropometri Kemenkes (Persentil / Median-SD 0-60 Bulan)
+    // 1. Data Standar Antropometri Kemenkes (TB/U dan BB/U menurut Usia Bulan)
     const TABEL_KEMENKES = {
         TBU: {
             "Laki-laki": {
@@ -161,6 +161,34 @@
         }
     };
 
+    // 2. Data Standar Antropometri Kemenkes (BB/TB berdasarkan Tinggi/Panjang Badan)
+    const TABEL_BBTB = {
+        "Laki-laki": {
+            65: {m: 7.4, sd_neg: 0.60, sd_pos: 0.65},
+            70: {m: 8.6, sd_neg: 0.65, sd_pos: 0.70},
+            75: {m: 9.5, sd_neg: 0.70, sd_pos: 0.80},
+            80: {m: 10.4, sd_neg: 0.75, sd_pos: 0.85},
+            85: {m: 11.4, sd_neg: 0.80, sd_pos: 0.95},
+            90: {m: 12.5, sd_neg: 0.90, sd_pos: 1.05},
+            95: {m: 13.7, sd_neg: 1.00, sd_pos: 1.15},
+            100: {m: 15.0, sd_neg: 1.10, sd_pos: 1.30},
+            105: {m: 16.4, sd_neg: 1.20, sd_pos: 1.45},
+            110: {m: 18.0, sd_neg: 1.30, sd_pos: 1.60}
+        },
+        "Perempuan": {
+            65: {m: 7.0, sd_neg: 0.55, sd_pos: 0.60},
+            70: {m: 8.0, sd_neg: 0.60, sd_pos: 0.65},
+            75: {m: 9.0, sd_neg: 0.65, sd_pos: 0.75},
+            80: {m: 10.0, sd_neg: 0.70, sd_pos: 0.80},
+            85: {m: 11.0, sd_neg: 0.75, sd_pos: 0.90},
+            90: {m: 12.1, sd_neg: 0.85, sd_pos: 1.00},
+            95: {m: 13.3, sd_neg: 0.95, sd_pos: 1.10},
+            100: {m: 14.6, sd_neg: 1.05, sd_pos: 1.25},
+            105: {m: 16.0, sd_neg: 1.15, sd_pos: 1.40},
+            110: {m: 17.6, sd_neg: 1.25, sd_pos: 1.55}
+        }
+    };
+
     function hitungUsiaBulan(tglLahirStr, tglPeriksaStr) {
         if (!tglLahirStr || !tglPeriksaStr) return null;
         let d1 = new Date(tglLahirStr);
@@ -170,7 +198,7 @@
         return months < 0 ? 0 : months;
     }
 
-    // Interpolasi Presisi Nilai Standar Deviasi Kemenkes berdasarkan Usia Bulan
+    // Interpolasi Presisi Nilai Standar Deviasi Kemenkes berdasarkan Usia
     function getReferenceData(indikator, jk, usiaBulan) {
         let table = TABEL_KEMENKES[indikator][jk];
         let keys = Object.keys(table).map(Number).sort((a, b) => a - b);
@@ -189,6 +217,33 @@
         }
 
         let factor = (usiaBulan - lowerKey) / (upperKey - lowerKey);
+        let m = table[lowerKey].m + factor * (table[upperKey].m - table[lowerKey].m);
+        let sd_neg = table[lowerKey].sd_neg + factor * (table[upperKey].sd_neg - table[lowerKey].sd_neg);
+        let sd_pos = table[lowerKey].sd_pos + factor * (table[upperKey].sd_pos - table[lowerKey].sd_pos);
+
+        return { m, sd_neg, sd_pos };
+    }
+
+    // Interpolasi Presisi Nilai Standar Deviasi Kemenkes berdasarkan Tinggi Badan (BB/TB)
+    function getBBTBReference(jk, tb) {
+        let table = TABEL_BBTB[jk];
+        let keys = Object.keys(table).map(Number).sort((a, b) => a - b);
+        
+        if (tb <= keys[0]) return table[keys[0]];
+        if (tb >= keys[keys.length - 1]) return table[keys[keys.length - 1]];
+
+        let lowerKey = keys[0];
+        let upperKey = keys[keys.length - 1];
+
+        for (let i = 0; i < keys.length - 1; i++) {
+            if (tb >= keys[i] && tb <= keys[i + 1]) {
+                lowerKey = keys[i];
+                upperKey = keys[i + 1];
+                break;
+            }
+        }
+
+        let factor = (tb - lowerKey) / (upperKey - lowerKey);
         let m = table[lowerKey].m + factor * (table[upperKey].m - table[lowerKey].m);
         let sd_neg = table[lowerKey].sd_neg + factor * (table[upperKey].sd_neg - table[lowerKey].sd_neg);
         let sd_pos = table[lowerKey].sd_pos + factor * (table[upperKey].sd_pos - table[lowerKey].sd_pos);
@@ -232,9 +287,9 @@
         let refBBU = getReferenceData("BBU", jk, usiaBulan);
         let zBBU = hitungZScore(bb, refBBU);
 
-        // 3. Estimasi Z-Score BB/TB
-        let expectedBB = (tb * 0.225) - 9.0;
-        let zBBTB = (bb - expectedBB) / (expectedBB * 0.12);
+        // 3. Hitung Z-Score BB/TB Presisi
+        let refBBTB = getBBTBReference(jk, tb);
+        let zBBTB = hitungZScore(bb, refBBTB);
 
         // Klasifikasi Kemenkes
         let statusTBU = "Normal"; let classTBU = "bg-green";
