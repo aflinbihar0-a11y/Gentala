@@ -22,6 +22,14 @@
         .btn-save { background-color: #2563eb; color: white; }
         .btn-sync { background-color: #059669; color: white; }
         .status-box { margin-top: 16px; padding: 12px; border-radius: 8px; background-color: #f1f5f9; font-size: 0.9rem; border-left: 4px solid #2563eb; }
+        
+        /* Box Hasil Skrining Realtime */
+        .result-card { display: none; margin-top: 16px; padding: 14px; border-radius: 10px; background-color: #eff6ff; border: 1px solid #bfdbfe; }
+        .result-title { font-weight: bold; color: #1e40af; margin-bottom: 8px; font-size: 0.95rem; border-bottom: 1px solid #dbeafe; padding-bottom: 4px; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; margin-top: 2px; }
+        .bg-green { background-color: #dcfce7; color: #166534; }
+        .bg-yellow { background-color: #fef9c3; color: #854d0e; }
+        .bg-red { background-color: #fee2e2; color: #991b1b; }
     </style>
 </head>
 <body>
@@ -49,8 +57,8 @@
     <div class="form-group">
         <label>Jenis Kelamin</label>
         <div class="radio-group">
-            <label class="radio-label"><input type="radio" name="jk" value="Laki-laki" checked> Laki-laki</label>
-            <label class="radio-label"><input type="radio" name="jk" value="Perempuan"> Perempuan</label>
+            <label class="radio-label"><input type="radio" name="jk" value="Laki-laki" checked onchange="hitungGiziOffline()"> Laki-laki</label>
+            <label class="radio-label"><input type="radio" name="jk" value="Perempuan" onchange="hitungGiziOffline()"> Perempuan</label>
         </div>
     </div>
 
@@ -58,22 +66,31 @@
 
     <div class="form-group">
         <label>Tanggal Lahir</label>
-        <input type="date" id="tgl_lahir">
+        <input type="date" id="tgl_lahir" onchange="hitungGiziOffline()">
     </div>
 
     <div class="form-group">
         <label>Tanggal Pemeriksaan</label>
-        <input type="date" id="tgl_periksa">
+        <input type="date" id="tgl_periksa" onchange="hitungGiziOffline()">
     </div>
 
     <div class="form-group">
         <label>Tinggi/Panjang Badan (cm)</label>
-        <input type="number" id="tb" step="0.1" placeholder="0.0">
+        <input type="number" id="tb" step="0.1" placeholder="0.0" oninput="hitungGiziOffline()">
     </div>
 
     <div class="form-group">
         <label>Berat Badan (kg)</label>
-        <input type="number" id="bb" step="0.1" placeholder="0.0">
+        <input type="number" id="bb" step="0.1" placeholder="0.0" oninput="hitungGiziOffline()">
+    </div>
+
+    <!-- Output Hasil Skrining Offline -->
+    <div id="hasil_skrining" class="result-card">
+        <div class="result-title">📊 Hasil Analisis Gizi (Offline):</div>
+        <div><strong>Usia:</strong> <span id="res_usia">-</span></div>
+        <div style="margin-top: 6px;"><strong>BB/U:</strong> <span id="res_bbu" class="badge bg-green">-</span></div>
+        <div style="margin-top: 4px;"><strong>TB/U:</strong> <span id="res_tbu" class="badge bg-green">-</span></div>
+        <div style="margin-top: 4px;"><strong>BB/TB:</strong> <span id="res_bbtb" class="badge bg-green">-</span></div>
     </div>
 
     <button class="btn-save" onclick="simpanLokal()">💾 Simpan Data ke HP</button>
@@ -86,10 +103,128 @@
 </div>
 
 <script>
-    const SCRIPT_URL = "PASANG_URL_GOOGLE_APPS_SCRIPT_DI_SINI";
+    const SCRIPT_URL = "function doPost(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // Langsung menargetkan Sheet 2 (fitur skrining gizi)
+    var sheet = ss.getSheetByName("Sheet 2");
 
-    // Set default tanggal hari ini pada Tanggal Pemeriksaan
+    // Membaca data JSON yang dikirim dari PWA Gentala
+    var contents = JSON.parse(e.postData.contents);
+
+    var timestamp = contents.timestamp || new Date().toLocaleString("id-ID");
+    var namaAnak = contents.nama_anak || "-";
+    var alamat = contents.alamat || "-";
+    var tb = contents.tb || 0;
+    var bb = contents.bb || 0;
+
+    // Menambahkan baris data baru ke paling bawah Sheet 2
+    sheet.appendRow([
+      timestamp,
+      namaAnak,
+      alamat,
+      tb,
+      bb
+    ]);
+
+    return ContentService.createTextOutput(JSON.stringify({
+      "status": "success",
+      "message": "Data skrining gizi berhasil disimpan ke Sheet 2!"
+    })).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      "status": "error",
+      "message": error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}";
+
+    // Set default tanggal hari ini
     document.getElementById('tgl_periksa').valueAsDate = new Date();
+
+    // Fungsi Menghitung Usia Bulan Sesuai Aturan Kemenkes
+    function hitungUsiaBulan(tglLahirStr, tglPeriksaStr) {
+        if (!tglLahirStr || !tglPeriksaStr) return null;
+        let d1 = new Date(tglLahirStr);
+        let d2 = new Date(tglPeriksaStr);
+        
+        let months = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
+        if (d2.getDate() < d1.getDate()) {
+            months--;
+        }
+        return months < 0 ? 0 : months;
+    }
+
+    // Algoritma Kalkulator Status Gizi Offline (WHO Median Standard Approximation)
+    function hitungGiziOffline() {
+        let tglLahir = document.getElementById("tgl_lahir").value;
+        let tglPeriksa = document.getElementById("tgl_periksa").value;
+        let tb = parseFloat(document.getElementById("tb").value);
+        let bb = parseFloat(document.getElementById("bb").value);
+        let jk = document.querySelector('input[name="jk"]:checked').value;
+
+        if (!tglLahir || isNaN(tb) || isNaN(bb) || tb <= 0 || bb <= 0) {
+            document.getElementById("hasil_skrining").style.display = "none";
+            return;
+        }
+
+        let usiaBulan = hitungUsiaBulan(tglLahir, tglPeriksa);
+        if (usiaBulan === null || usiaBulan > 60) {
+            document.getElementById("hasil_skrining").style.display = "none";
+            return;
+        }
+
+        // Estimasi Median WHO
+        let medTB = (jk === "Laki-laki") ? (50 + usiaBulan * 1.05) : (49 + usiaBulan * 1.02);
+        let medBB = (jk === "Laki-laki") ? (3.3 + usiaBulan * 0.38) : (3.2 + usiaBulan * 0.35);
+
+        // Calculate simplified Z-score for offline estimate
+        let zTBU = (tb - medTB) / (medTB * 0.045);
+        let zBBU = (bb - medBB) / (medBB * 0.13);
+        let expectedBBforTB = (tb * 0.22) - 8.5; 
+        let zBBTB = (bb - expectedBBforTB) / (expectedBBforTB * 0.12);
+
+        // Kategori TB/U
+        let statusTBU = "Normal";
+        let classTBU = "bg-green";
+        if (zTBU < -3) { statusTBU = "Sangat Pendek (Stunting)"; classTBU = "bg-red"; }
+        else if (zTBU < -2) { statusTBU = "Pendek (Stunting)"; classTBU = "bg-yellow"; }
+        else if (zTBU > 3) { statusTBU = "Tinggi"; classTBU = "bg-green"; }
+
+        // Kategori BB/U
+        let statusBBU = "BB Normal";
+        let classBBU = "bg-green";
+        if (zBBU < -3) { statusBBU = "BB Sangat Kurang"; classBBU = "bg-red"; }
+        else if (zBBU < -2) { statusBBU = "BB Kurang"; classBBU = "bg-yellow"; }
+        else if (zBBU > 1) { statusBBU = "Risiko BB Lebih"; classBBU = "bg-yellow"; }
+
+        // Kategori BB/TB
+        let statusBBTB = "Gizi Baik (Normal)";
+        let classBBTB = "bg-green";
+        if (zBBTB < -3) { statusBBTB = "Gizi Buruk"; classBBTB = "bg-red"; }
+        else if (zBBTB < -2) { statusBBTB = "Gizi Kurang"; classBBTB = "bg-yellow"; }
+        else if (zBBTB > 2) { statusBBTB = "Gizi Lebih / Obesitas"; classBBTB = "bg-red"; }
+        else if (zBBTB > 1) { statusBBTB = "Berisiko Gizi Lebih"; classBBTB = "bg-yellow"; }
+
+        // Tampilkan ke UI
+        document.getElementById("res_usia").innerText = `${usiaBulan} Bulan`;
+        
+        let elTBU = document.getElementById("res_tbu");
+        elTBU.innerText = statusTBU;
+        elTBU.className = `badge ${classTBU}`;
+
+        let elBBU = document.getElementById("res_bbu");
+        elBBU.innerText = statusBBU;
+        elBBU.className = `badge ${classBBU}`;
+
+        let elBBTB = document.getElementById("res_bbtb");
+        elBBTB.innerText = statusBBTB;
+        elBBTB.className = `badge ${classBBTB}`;
+
+        document.getElementById("hasil_skrining").style.display = "block";
+    }
 
     function updateCount() {
         let dataLokal = JSON.parse(localStorage.getItem("gentala_offline_data") || "[]");
@@ -110,6 +245,11 @@
             return;
         }
 
+        let statusTBU = document.getElementById("res_tbu").innerText;
+        let statusBBU = document.getElementById("res_bbu").innerText;
+        let statusBBTB = document.getElementById("res_bbtb").innerText;
+        let usiaBulan = document.getElementById("res_usia").innerText;
+
         let entriBaru = {
             timestamp: new Date().toLocaleString("id-ID"),
             nama_anak: nama,
@@ -117,20 +257,25 @@
             jk: jk,
             tgl_lahir: tgl_lahir,
             tgl_periksa: tgl_periksa,
+            usia_bulan: usiaBulan,
             tb: parseFloat(tb),
-            bb: parseFloat(bb)
+            bb: parseFloat(bb),
+            status_tbu: statusTBU,
+            status_bbu: statusBBU,
+            status_bbtb: statusBBTB
         };
 
         let dataLokal = JSON.parse(localStorage.getItem("gentala_offline_data") || "[]");
         dataLokal.push(entriBaru);
         localStorage.setItem("gentala_offline_data", JSON.stringify(dataLokal));
 
-        // Reset Form
+        // Reset
         document.getElementById("nama").value = "";
         document.getElementById("tgl_lahir").value = "";
         document.getElementById("tb").value = "";
         document.getElementById("bb").value = "";
-        document.getElementById("log_status").innerHTML = "<span style='color: #059669;'>✅ Data berhasil tersimpan di HP!</span>";
+        document.getElementById("hasil_skrining").style.display = "none";
+        document.getElementById("log_status").innerHTML = "<span style='color: #059669;'>✅ Data + Hasil Skrining berhasil tersimpan di HP!</span>";
         updateCount();
     }
 
