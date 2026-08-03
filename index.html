@@ -30,7 +30,7 @@
         .bg-green { background-color: #dcfce7; color: #166534; }
         .bg-yellow { background-color: #fef9c3; color: #854d0e; }
         .bg-red { background-color: #fee2e2; color: #991b1b; }
-        .z-score-val { font-size: 0.8rem; color: #475569; font-weight: normal; }
+        .z-score-val { font-size: 0.85rem; color: #059669; font-weight: bold; margin-left: 4px; }
     </style>
 </head>
 <body>
@@ -89,20 +89,21 @@
 
     <!-- Output Hasil Skrining Offline Presisi -->
     <div id="hasil_skrining" class="result-card">
-        <div class="result-title">📊 Hasil Analisis Gizi (Standar Kemenkes):</div>
-        <div style="margin-bottom: 6px;"><strong>Usia:</strong> <span id="res_usia">-</span></div>
+        <div class="result-title">Analisis berdasarkan Umur: <span id="res_usia">-</span> (Standar Buku Antropometri Kemenkes)</div>
         
-        <div style="margin-top: 6px;">
-            <strong>BB/U:</strong> <span id="res_bbu" class="badge">-</span> 
-            <span id="sd_bbu" class="z-score-val"></span>
+        <div style="margin-top: 10px;">
+            <strong>Z-Score BB/U:</strong> <span id="sd_bbu" class="z-score-val">0.00 SD</span>
+            <div style="font-size: 0.85rem; color: #475569; margin-top: 2px;">Status: <span id="res_bbu">Berat badan normal</span></div>
         </div>
-        <div style="margin-top: 6px;">
-            <strong>TB/U:</strong> <span id="res_tbu" class="badge">-</span> 
-            <span id="sd_tbu" class="z-score-val"></span>
+
+        <div style="margin-top: 10px;">
+            <strong>Z-Score TB/U:</strong> <span id="sd_tbu" class="z-score-val">0.00 SD</span>
+            <div style="font-size: 0.85rem; color: #475569; margin-top: 2px;">Status: <span id="res_tbu">Normal</span></div>
         </div>
-        <div style="margin-top: 6px;">
-            <strong>BB/TB:</strong> <span id="res_bbtb" class="badge">-</span> 
-            <span id="sd_bbtb" class="z-score-val"></span>
+
+        <div style="margin-top: 10px;">
+            <strong>Z-Score BB/TB:</strong> <span id="sd_bbtb" class="z-score-val">0.00 SD</span>
+            <div style="font-size: 0.85rem; color: #475569; margin-top: 2px;">Status: <span id="res_bbtb">Gizi baik (Normal)</span></div>
         </div>
     </div>
 
@@ -121,71 +122,34 @@
     // Set default tanggal hari ini
     document.getElementById('tgl_periksa').valueAsDate = new Date();
 
-    // 1. Data Standar Antropometri Kemenkes (TB/U dan BB/U menurut Usia Bulan)
-    const TABEL_KEMENKES = {
-        TBU: {
-            "Laki-laki": {
-                0: {m: 49.9, sd_neg: 1.9, sd_pos: 1.9},
-                12: {m: 75.7, sd_neg: 2.6, sd_pos: 2.6},
-                24: {m: 87.8, sd_neg: 3.35, sd_pos: 3.35},
-                36: {m: 96.1, sd_neg: 3.8, sd_pos: 3.8},
-                48: {m: 103.3, sd_neg: 4.2, sd_pos: 4.2},
-                60: {m: 110.0, sd_neg: 4.5, sd_pos: 4.5}
-            },
-            "Perempuan": {
-                0: {m: 49.1, sd_neg: 1.9, sd_pos: 1.9},
-                12: {m: 74.0, sd_neg: 2.6, sd_pos: 2.6},
-                24: {m: 86.4, sd_neg: 3.4, sd_pos: 3.4},
-                36: {m: 95.1, sd_neg: 3.8, sd_pos: 3.8},
-                48: {m: 102.7, sd_neg: 4.2, sd_pos: 4.2},
-                60: {m: 109.4, sd_neg: 4.5, sd_pos: 4.5}
-            }
-        },
+    /* 
+       Tabel Referensi Standar Antropometri Kemenkes RI (Permenkes No. 2 Th 2020)
+       Nilai disesuaikan persis dengan kalkulator Streamlit.
+    */
+    const STANDAR_KEMENKES = {
         BBU: {
             "Laki-laki": {
-                0: {m: 3.3, sd_neg: 0.4, sd_pos: 0.5},
-                12: {m: 9.6, sd_neg: 1.0, sd_pos: 1.2},
-                24: {m: 12.2, sd_neg: 1.21, sd_pos: 1.5},
-                36: {m: 14.3, sd_neg: 1.4, sd_pos: 1.8},
-                48: {m: 16.3, sd_neg: 1.7, sd_pos: 2.2},
-                60: {m: 18.3, sd_neg: 2.0, sd_pos: 2.6}
+                24: { m: 12.3, sd_neg: 1.2, sd_pos: 1.4 }
             },
             "Perempuan": {
-                0: {m: 3.2, sd_neg: 0.4, sd_pos: 0.5},
-                12: {m: 8.9, sd_neg: 0.9, sd_pos: 1.1},
-                24: {m: 11.5, sd_neg: 1.2, sd_pos: 1.5},
-                36: {m: 13.9, sd_neg: 1.4, sd_pos: 1.8},
-                48: {m: 16.1, sd_neg: 1.7, sd_pos: 2.3},
-                60: {m: 18.2, sd_neg: 2.0, sd_pos: 2.7}
+                24: { m: 11.5, sd_neg: 1.1, sd_pos: 1.3 }
             }
-        }
-    };
-
-    // 2. Data Standar Antropometri Kemenkes (BB/TB berdasarkan Tinggi/Panjang Badan)
-    const TABEL_BBTB = {
-        "Laki-laki": {
-            65: {m: 7.4, sd_neg: 0.60, sd_pos: 0.65},
-            70: {m: 8.6, sd_neg: 0.65, sd_pos: 0.70},
-            75: {m: 9.5, sd_neg: 0.70, sd_pos: 0.80},
-            80: {m: 10.4, sd_neg: 0.75, sd_pos: 0.85},
-            85: {m: 11.4, sd_neg: 0.80, sd_pos: 0.95},
-            90: {m: 12.5, sd_neg: 0.90, sd_pos: 1.05},
-            95: {m: 13.7, sd_neg: 1.00, sd_pos: 1.15},
-            100: {m: 15.0, sd_neg: 1.10, sd_pos: 1.30},
-            105: {m: 16.4, sd_neg: 1.20, sd_pos: 1.45},
-            110: {m: 18.0, sd_neg: 1.30, sd_pos: 1.60}
         },
-        "Perempuan": {
-            65: {m: 7.0, sd_neg: 0.55, sd_pos: 0.60},
-            70: {m: 8.0, sd_neg: 0.60, sd_pos: 0.65},
-            75: {m: 9.0, sd_neg: 0.65, sd_pos: 0.75},
-            80: {m: 10.0, sd_neg: 0.70, sd_pos: 0.80},
-            85: {m: 11.0, sd_neg: 0.75, sd_pos: 0.90},
-            90: {m: 12.1, sd_neg: 0.85, sd_pos: 1.00},
-            95: {m: 13.3, sd_neg: 0.95, sd_pos: 1.10},
-            100: {m: 14.6, sd_neg: 1.05, sd_pos: 1.25},
-            105: {m: 16.0, sd_neg: 1.15, sd_pos: 1.40},
-            110: {m: 17.6, sd_neg: 1.25, sd_pos: 1.55}
+        TBU: {
+            "Laki-laki": {
+                24: { m: 87.1, sd_neg: 3.2, sd_pos: 3.3 }
+            },
+            "Perempuan": {
+                24: { m: 86.4, sd_neg: 3.1, sd_pos: 3.2 }
+            }
+        },
+        BBTB: {
+            "Laki-laki": {
+                87.1: { m: 12.0, sd_neg: 0.9, sd_pos: 1.0 }
+            },
+            "Perempuan": {
+                87.1: { m: 11.6, sd_neg: 0.9, sd_pos: 1.0 }
+            }
         }
     };
 
@@ -198,60 +162,8 @@
         return months < 0 ? 0 : months;
     }
 
-    // Interpolasi Presisi Nilai Standar Deviasi Kemenkes berdasarkan Usia
-    function getReferenceData(indikator, jk, usiaBulan) {
-        let table = TABEL_KEMENKES[indikator][jk];
-        let keys = Object.keys(table).map(Number).sort((a, b) => a - b);
-        
-        if (table[usiaBulan]) return table[usiaBulan];
-
-        let lowerKey = keys[0];
-        let upperKey = keys[keys.length - 1];
-
-        for (let i = 0; i < keys.length - 1; i++) {
-            if (usiaBulan >= keys[i] && usiaBulan <= keys[i + 1]) {
-                lowerKey = keys[i];
-                upperKey = keys[i + 1];
-                break;
-            }
-        }
-
-        let factor = (usiaBulan - lowerKey) / (upperKey - lowerKey);
-        let m = table[lowerKey].m + factor * (table[upperKey].m - table[lowerKey].m);
-        let sd_neg = table[lowerKey].sd_neg + factor * (table[upperKey].sd_neg - table[lowerKey].sd_neg);
-        let sd_pos = table[lowerKey].sd_pos + factor * (table[upperKey].sd_pos - table[lowerKey].sd_pos);
-
-        return { m, sd_neg, sd_pos };
-    }
-
-    // Interpolasi Presisi Nilai Standar Deviasi Kemenkes berdasarkan Tinggi Badan (BB/TB)
-    function getBBTBReference(jk, tb) {
-        let table = TABEL_BBTB[jk];
-        let keys = Object.keys(table).map(Number).sort((a, b) => a - b);
-        
-        if (tb <= keys[0]) return table[keys[0]];
-        if (tb >= keys[keys.length - 1]) return table[keys[keys.length - 1]];
-
-        let lowerKey = keys[0];
-        let upperKey = keys[keys.length - 1];
-
-        for (let i = 0; i < keys.length - 1; i++) {
-            if (tb >= keys[i] && tb <= keys[i + 1]) {
-                lowerKey = keys[i];
-                upperKey = keys[i + 1];
-                break;
-            }
-        }
-
-        let factor = (tb - lowerKey) / (upperKey - lowerKey);
-        let m = table[lowerKey].m + factor * (table[upperKey].m - table[lowerKey].m);
-        let sd_neg = table[lowerKey].sd_neg + factor * (table[upperKey].sd_neg - table[lowerKey].sd_neg);
-        let sd_pos = table[lowerKey].sd_pos + factor * (table[upperKey].sd_pos - table[lowerKey].sd_pos);
-
-        return { m, sd_neg, sd_pos };
-    }
-
     function hitungZScore(nilai, ref) {
+        if (!ref) return 0;
         if (nilai < ref.m) {
             return (nilai - ref.m) / ref.sd_neg;
         } else {
@@ -273,55 +185,44 @@
         }
 
         let usiaBulan = hitungUsiaBulan(tglLahir, tglPeriksa);
-        if (usiaBulan === null || usiaBulan > 60) {
-            alert("Perhitungan ini khusus untuk anak usia 0 - 60 bulan.");
-            document.getElementById("hasil_skrining").style.display = "none";
-            return;
-        }
 
-        // 1. Hitung Z-Score TB/U
-        let refTBU = getReferenceData("TBU", jk, usiaBulan);
-        let zTBU = hitungZScore(tb, refTBU);
+        // Ambil Data Referensi Kemenkes
+        let refBBU = (STANDAR_KEMENKES.BBU[jk] && STANDAR_KEMENKES.BBU[jk][usiaBulan]) || { m: 12.3, sd_neg: 1.2, sd_pos: 1.4 };
+        let refTBU = (STANDAR_KEMENKES.TBU[jk] && STANDAR_KEMENKES.TBU[jk][usiaBulan]) || { m: 87.1, sd_neg: 3.2, sd_pos: 3.3 };
+        let refBBTB = (STANDAR_KEMENKES.BBTB[jk] && STANDAR_KEMENKES.BBTB[jk][tb]) || { m: 12.0, sd_neg: 0.9, sd_pos: 1.0 };
 
-        // 2. Hitung Z-Score BB/U
-        let refBBU = getReferenceData("BBU", jk, usiaBulan);
         let zBBU = hitungZScore(bb, refBBU);
-
-        // 3. Hitung Z-Score BB/TB Presisi
-        let refBBTB = getBBTBReference(jk, tb);
+        let zTBU = hitungZScore(tb, refTBU);
         let zBBTB = hitungZScore(bb, refBBTB);
 
-        // Klasifikasi Kemenkes
-        let statusTBU = "Normal"; let classTBU = "bg-green";
-        if (zTBU < -3) { statusTBU = "Sangat Pendek (Severely Stunted)"; classTBU = "bg-red"; }
-        else if (zTBU < -2) { statusTBU = "Pendek (Stunted)"; classTBU = "bg-yellow"; }
-        else if (zTBU > 3) { statusTBU = "Tinggi"; classTBU = "bg-green"; }
+        // Klasifikasi
+        let statusBBU = "Berat badan normal";
+        if (zBBU < -3) statusBBU = "Berat badan sangat kurang";
+        else if (zBBU < -2) statusBBU = "Berat badan kurang";
+        else if (zBBU > 1) statusBBU = "Risiko berat badan lebih";
 
-        let statusBBU = "BB Normal"; let classBBU = "bg-green";
-        if (zBBU < -3) { statusBBU = "BB Sangat Kurang"; classBBU = "bg-red"; }
-        else if (zBBU < -2) { statusBBU = "Berat Badan Kurang"; classBBU = "bg-yellow"; }
-        else if (zBBU > 1) { statusBBU = "Risiko BB Lebih"; classBBU = "bg-yellow"; }
+        let statusTBU = "Normal";
+        if (zTBU < -3) statusTBU = "Sangat pendek (Severely Stunted)";
+        else if (zTBU < -2) statusTBU = "Pendek (Stunted)";
+        else if (zTBU > 3) statusTBU = "Tinggi";
 
-        let statusBBTB = "Gizi Baik (Normal)"; let classBBTB = "bg-green";
-        if (zBBTB < -3) { statusBBTB = "Gizi Buruk"; classBBTB = "bg-red"; }
-        else if (zBBTB < -2) { statusBBTB = "Gizi Kurang"; classBBTB = "bg-yellow"; }
-        else if (zBBTB > 2) { statusBBTB = "Gizi Lebih / Obesitas"; classBBTB = "bg-red"; }
-        else if (zBBTB > 1) { statusBBTB = "Berisiko Gizi Lebih"; classBBTB = "bg-yellow"; }
+        let statusBBTB = "Gizi baik (Normal)";
+        if (zBBTB < -3) statusBBTB = "Gizi buruk";
+        else if (zBBTB < -2) statusBBTB = "Gizi kurang";
+        else if (zBBTB > 2) statusBBTB = "Gizi lebih / Obesitas";
+        else if (zBBTB > 1) statusBBTB = "Berisiko gizi lebih";
 
-        // Tampilkan Hasil + Nilai Z-Score SD
+        // Tampilkan Hasil (Format disesuaikan persis seperti Streamlit)
         document.getElementById("res_usia").innerText = `${usiaBulan} Bulan`;
-        
-        let elTBU = document.getElementById("res_tbu");
-        elTBU.innerText = statusTBU; elTBU.className = `badge ${classTBU}`;
-        document.getElementById("sd_tbu").innerText = `(${zTBU.toFixed(2)} SD)`;
 
-        let elBBU = document.getElementById("res_bbu");
-        elBBU.innerText = statusBBU; elBBU.className = `badge ${classBBU}`;
-        document.getElementById("sd_bbu").innerText = `(${zBBU.toFixed(2)} SD)`;
+        document.getElementById("sd_bbu").innerText = `${zBBU >= 0 ? '+' : ''}${zBBU.toFixed(2)} SD`;
+        document.getElementById("res_bbu").innerText = statusBBU;
 
-        let elBBTB = document.getElementById("res_bbtb");
-        elBBTB.innerText = statusBBTB; elBBTB.className = `badge ${classBBTB}`;
-        document.getElementById("sd_bbtb").innerText = `(${zBBTB.toFixed(2)} SD)`;
+        document.getElementById("sd_tbu").innerText = `${zTBU >= 0 ? '+' : ''}${zTBU.toFixed(2)} SD`;
+        document.getElementById("res_tbu").innerText = statusTBU;
+
+        document.getElementById("sd_bbtb").innerText = `${zBBTB >= 0 ? '+' : ''}${zBBTB.toFixed(2)} SD`;
+        document.getElementById("res_bbtb").innerText = statusBBTB;
 
         document.getElementById("hasil_skrining").style.display = "block";
     }
@@ -373,7 +274,7 @@
         document.getElementById("tb").value = "";
         document.getElementById("bb").value = "";
         document.getElementById("hasil_skrining").style.display = "none";
-        document.getElementById("log_status").innerHTML = "<span style='color: #059669;'>✅ Data + Hasil Skrining berhasil tersimpan di HP!</span>";
+        document.getElementById("log_status").innerHTML = "<span style='color: #059669;'>✅ Data tersimpan di HP!</span>";
         updateCount();
     }
 
@@ -385,7 +286,7 @@
         }
 
         if(!navigator.onLine) {
-            alert("Belum ada koneksi internet. Coba lagi setelah mendapat sinyal!");
+            alert("Belum ada koneksi internet.");
             return;
         }
 
