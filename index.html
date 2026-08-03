@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GENTALA Offline</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 16px; margin: 0; background-color: #f8fafc; color: #1e293b; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); max-width: 480px; margin: 0 auto; }
+        h2 { margin-top: 0; color: #1e3a8a; font-size: 1.25rem; }
+        .form-group { margin-bottom: 14px; }
+        label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.9rem; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
+        button { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; margin-top: 10px; }
+        .btn-save { background-color: #2563eb; color: white; }
+        .btn-sync { background-color: #059669; color: white; }
+        .status-box { margin-top: 16px; padding: 12px; border-radius: 8px; background-color: #f1f5f9; font-size: 0.9rem; border-left: 4px solid #2563eb; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>🧸 GENTALA Posyandu Offline</h2>
+    <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 16px;">Form Input Anak khusus area tanpa sinyal (Batu Tangga & anak desa).</p>
+
+    <div class="form-group">
+        <label>Nama Anak</label>
+        <input type="text" id="nama" placeholder="Contoh: Arka Saylendra">
+    </div>
+
+    <div class="form-group">
+        <label>Alamat (Desa)</label>
+        <select id="alamat">
+            <option value="Batu Tangga">Batu Tangga</option>
+            <option value="Muara Hungi">Muara Hungi</option>
+            <option value="Pembakulan">Pembakulan</option>
+            <option value="Nateh">Nateh</option>
+            <option value="Datar Batung">Datar Batung</option>
+            <option value="Desa Lainnya">Desa Lainnya</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Tinggi/Panjang Badan (cm)</label>
+        <input type="number" id="tb" step="0.1" placeholder="0.0">
+    </div>
+
+    <div class="form-group">
+        <label>Berat Badan (kg)</label>
+        <input type="number" id="bb" step="0.1" placeholder="0.0">
+    </div>
+
+    <button class="btn-save" onclick="simpanLokal()">💾 Simpan Data ke HP</button>
+    <button class="btn-sync" onclick="sinkronkanData()">☁️ Kirim Data ke Cloud (Saat Ada Sinyal)</button>
+
+    <div class="status-box">
+        <strong>Antrean Data di HP:</strong> <span id="jumlah_data">0</span> anak
+        <div id="log_status" style="margin-top: 6px;"></div>
+    </div>
+</div>
+
+<script>
+    // Nanti ganti dengan URL Google Apps Script milik Dokter
+    const SCRIPT_URL = "PASANG_URL_GOOGLE_APPS_SCRIPT_DI_SINI";
+
+    function updateCount() {
+        let dataLokal = JSON.parse(localStorage.getItem("gentala_offline_data") || "[]");
+        document.getElementById("jumlah_data").innerText = dataLokal.length;
+    }
+
+    function simpanLokal() {
+        let nama = document.getElementById("nama").value;
+        let alamat = document.getElementById("alamat").value;
+        let tb = document.getElementById("tb").value;
+        let bb = document.getElementById("bb").value;
+
+        if(!nama || !tb || !bb) {
+            alert("Mohon isi Nama, TB, dan BB terlebih dahulu!");
+            return;
+        }
+
+        let entriBaru = {
+            timestamp: new Date().toLocaleString("id-ID"),
+            nama_anak: nama,
+            alamat: alamat,
+            tb: parseFloat(tb),
+            bb: parseFloat(bb)
+        };
+
+        let dataLokal = JSON.parse(localStorage.getItem("gentala_offline_data") || "[]");
+        dataLokal.push(entriBaru);
+        localStorage.setItem("gentala_offline_data", JSON.stringify(dataLokal));
+
+        document.getElementById("nama").value = "";
+        document.getElementById("tb").value = "";
+        document.getElementById("bb").value = "";
+        document.getElementById("log_status").innerHTML = "<span style='color: #059669;'>✅ Tersimpan di HP!</span>";
+        updateCount();
+    }
+
+    async function sinkronkanData() {
+        let dataLokal = JSON.parse(localStorage.getItem("gentala_offline_data") || "[]");
+        if(dataLokal.length === 0) {
+            alert("Tidak ada antrean data offline.");
+            return;
+        }
+
+        if(!navigator.onLine) {
+            alert("Belum ada koneksi internet. Coba lagi setelah mendapat sinyal!");
+            return;
+        }
+
+        document.getElementById("log_status").innerText = "⏳ Mengunggah data...";
+
+        try {
+            for(let i = 0; i < dataLokal.length; i++) {
+                await fetch(SCRIPT_URL, {
+                    method: "POST",
+                    mode: "no-cors",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(dataLokal[i])
+                });
+            }
+            localStorage.removeItem("gentala_offline_data");
+            document.getElementById("log_status").innerHTML = "<span style='color: #059669;'>🎉 Semua data tersinkronisasi!</span>";
+            updateCount();
+        } catch(err) {
+            document.getElementById("log_status").innerText = "❌ Gagal kirim. Cek koneksi internet.";
+        }
+    }
+
+    // Register Service Worker untuk PWA
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('Service Worker Registered'))
+                .catch(err => console.log('SW Registration Failed', err));
+        });
+    }
+
+    updateCount();
+</script>
+</body>
+</html>
