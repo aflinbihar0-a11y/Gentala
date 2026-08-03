@@ -19,12 +19,13 @@
         .radio-label { display: flex; align-items: center; gap: 6px; font-weight: normal; cursor: pointer; }
         .note { font-size: 0.8rem; color: #64748b; font-style: italic; margin-top: -8px; margin-bottom: 12px; }
         button { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; margin-top: 10px; }
+        .btn-calc { background-color: #0284c7; color: white; }
         .btn-save { background-color: #2563eb; color: white; }
         .btn-sync { background-color: #059669; color: white; }
         .status-box { margin-top: 16px; padding: 12px; border-radius: 8px; background-color: #f1f5f9; font-size: 0.9rem; border-left: 4px solid #2563eb; }
         
         /* Box Hasil Skrining Realtime */
-        .result-card { display: none; margin-top: 16px; padding: 14px; border-radius: 10px; background-color: #eff6ff; border: 1px solid #bfdbfe; }
+        .result-card { display: none; margin-top: 16px; margin-bottom: 16px; padding: 14px; border-radius: 10px; background-color: #eff6ff; border: 1px solid #bfdbfe; }
         .result-title { font-weight: bold; color: #1e40af; margin-bottom: 8px; font-size: 0.95rem; border-bottom: 1px solid #dbeafe; padding-bottom: 4px; }
         .badge { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; margin-top: 2px; }
         .bg-green { background-color: #dcfce7; color: #166534; }
@@ -57,8 +58,8 @@
     <div class="form-group">
         <label>Jenis Kelamin</label>
         <div class="radio-group">
-            <label class="radio-label"><input type="radio" name="jk" value="Laki-laki" checked onchange="hitungGiziOffline()"> Laki-laki</label>
-            <label class="radio-label"><input type="radio" name="jk" value="Perempuan" onchange="hitungGiziOffline()"> Perempuan</label>
+            <label class="radio-label"><input type="radio" name="jk" value="Laki-laki" checked> Laki-laki</label>
+            <label class="radio-label"><input type="radio" name="jk" value="Perempuan"> Perempuan</label>
         </div>
     </div>
 
@@ -66,23 +67,26 @@
 
     <div class="form-group">
         <label>Tanggal Lahir</label>
-        <input type="date" id="tgl_lahir" onchange="hitungGiziOffline()">
+        <input type="date" id="tgl_lahir">
     </div>
 
     <div class="form-group">
         <label>Tanggal Pemeriksaan</label>
-        <input type="date" id="tgl_periksa" onchange="hitungGiziOffline()">
+        <input type="date" id="tgl_periksa">
     </div>
 
     <div class="form-group">
         <label>Tinggi/Panjang Badan (cm)</label>
-        <input type="number" id="tb" step="0.1" placeholder="0.0" oninput="hitungGiziOffline()">
+        <input type="number" id="tb" step="0.1" placeholder="0.0">
     </div>
 
     <div class="form-group">
         <label>Berat Badan (kg)</label>
-        <input type="number" id="bb" step="0.1" placeholder="0.0" oninput="hitungGiziOffline()">
+        <input type="number" id="bb" step="0.1" placeholder="0.0">
     </div>
+
+    <!-- Tombol Hitung Manual -->
+    <button type="button" class="btn-calc" onclick="hitungGiziOffline()">🧮 Hitung Status Gizi</button>
 
     <!-- Output Hasil Skrining Offline -->
     <div id="hasil_skrining" class="result-card">
@@ -103,43 +107,8 @@
 </div>
 
 <script>
-    const SCRIPT_URL = "function doPost(e) {
-  try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    
-    // Langsung menargetkan Sheet 2 (fitur skrining gizi)
-    var sheet = ss.getSheetByName("Sheet 2");
-
-    // Membaca data JSON yang dikirim dari PWA Gentala
-    var contents = JSON.parse(e.postData.contents);
-
-    var timestamp = contents.timestamp || new Date().toLocaleString("id-ID");
-    var namaAnak = contents.nama_anak || "-";
-    var alamat = contents.alamat || "-";
-    var tb = contents.tb || 0;
-    var bb = contents.bb || 0;
-
-    // Menambahkan baris data baru ke paling bawah Sheet 2
-    sheet.appendRow([
-      timestamp,
-      namaAnak,
-      alamat,
-      tb,
-      bb
-    ]);
-
-    return ContentService.createTextOutput(JSON.stringify({
-      "status": "success",
-      "message": "Data skrining gizi berhasil disimpan ke Sheet 2!"
-    })).setMimeType(ContentService.MimeType.JSON);
-
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({
-      "status": "error",
-      "message": error.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-}";
+    // MASUKKAN WEB APP URL GOOGLE APPS SCRIPT DOKTER DI SINI (Contoh: https://script.google.com/macros/s/.../exec)
+    const SCRIPT_URL = "PASANG_WEB_APP_URL_DI_SINI";
 
     // Set default tanggal hari ini
     document.getElementById('tgl_periksa').valueAsDate = new Date();
@@ -166,12 +135,14 @@
         let jk = document.querySelector('input[name="jk"]:checked').value;
 
         if (!tglLahir || isNaN(tb) || isNaN(bb) || tb <= 0 || bb <= 0) {
+            alert("Mohon lengkapi Tanggal Lahir, TB, dan BB terlebih dahulu untuk menghitung!");
             document.getElementById("hasil_skrining").style.display = "none";
             return;
         }
 
         let usiaBulan = hitungUsiaBulan(tglLahir, tglPeriksa);
         if (usiaBulan === null || usiaBulan > 60) {
+            alert("Perhitungan ini khusus untuk anak usia 0 - 60 bulan.");
             document.getElementById("hasil_skrining").style.display = "none";
             return;
         }
@@ -245,6 +216,11 @@
             return;
         }
 
+        // Pastikan status gizi dihitung sebelum simpan
+        if(document.getElementById("hasil_skrining").style.display !== "block") {
+            hitungGiziOffline();
+        }
+
         let statusTBU = document.getElementById("res_tbu").innerText;
         let statusBBU = document.getElementById("res_bbu").innerText;
         let statusBBTB = document.getElementById("res_bbtb").innerText;
@@ -269,7 +245,7 @@
         dataLokal.push(entriBaru);
         localStorage.setItem("gentala_offline_data", JSON.stringify(dataLokal));
 
-        // Reset
+        // Reset Form
         document.getElementById("nama").value = "";
         document.getElementById("tgl_lahir").value = "";
         document.getElementById("tb").value = "";
