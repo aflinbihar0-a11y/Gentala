@@ -19,17 +19,46 @@ def koneksi_spreadsheet():
     creds_dict = st.secrets["gcp_service_account"] 
     creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
     client = gspread.authorize(creds)
-    # Otomatis mengarah ke file "GrowTrack Database" pada tab "Sheet2" sesuai gambar Dokter kemarin
     sheet = client.open("GrowTrack Database").worksheet("Sheet2")
     return sheet
+
+# --- FUNGSI VALIDASI ANTROPOMETRI (SANITY CHECK) ---
+def validasi_input_antropometri(bb, tb):
+    """
+    Mengecek kelayakan data antropometri sebelum dihitung dan disimpan.
+    """
+    # 1. Cek apabila TB dan BB tertukar atau terbalik
+    if tb <= bb:
+        return False, (
+            f"⚠️ **Peringatan Data Tidak Valid:** Tinggi/Panjang Badan ({tb:.1f} cm) "
+            f"kurang dari atau sama dengan Berat Badan ({bb:.1f} kg).\n\n"
+            "Posisi input **terindikasi tertukar** atau terdapat kesalahan ketik (typo). "
+            "Mohon periksa dan perbaiki nilai TB dan BB sebelum melanjutkan."
+        )
+    
+    # 2. Cek rentang nilai fisis wajar untuk balita (0-60 bulan)
+    if tb < 30.0 or tb > 130.0:
+        return False, (
+            f"⚠️ **Peringatan Tinggi Badan:** Nilai TB ({tb:.1f} cm) berada di luar rentang "
+            "wajar pemeriksaan balita (30.0 cm - 130.0 cm)."
+        )
+        
+    if bb < 1.0 or bb > 40.0:
+        return False, (
+            f"⚠️ **Peringatan Berat Badan:** Nilai BB ({bb:.1f} kg) berada di luar rentang "
+            "wajar pemeriksaan balita (1.0 kg - 40.0 kg)."
+        )
+
+    return True, ""
 
 # --- FORM INPUT ---
 with st.form("input_data"):
     st.markdown("### 📋 Form Input Data Pasien")
     nama = st.text_input("Nama Anak")
     alamat_pasien = st.selectbox(
-    "Alamat (Desa/Kelurahan)",
-    ["Batu Tangga", "Muara Hungi", "Pembakulan", "Nateh", "Datar Batung", "Desa Lainnya"])
+        "Alamat (Desa/Kelurahan)",
+        ["Batu Tangga", "Muara Hungi", "Pembakulan", "Nateh", "Datar Batung", "Desa Lainnya"]
+    )
     jk = st.radio("Jenis Kelamin", ["Laki-laki", "Perempuan"])
     st.markdown("*(Sesuai aturan Kemenkes, sisa hari tidak digenapkan ke atas. Contoh: 2 bulan 29 hari = 2 bulan)*")
     tgl_lahir = st.date_input("Tanggal Lahir", value=datetime.date(2024, 1, 1))
@@ -52,7 +81,6 @@ def hitung_zscore_multi(nilai, m, sd_m1, sd_m2, sd_m3, sd_p1, sd_p2, sd_p3):
         elif nilai >= sd_m3:
             return -2.0 + ((nilai - sd_m2) / (sd_m2 - sd_m3))
         else:
-            # Jika lebih ekstrem ke bawah dari -3 SD
             return -3.0 + ((nilai - sd_m3) / (sd_m2 - sd_m3))
             
     # Jika nilai berada di atas median
@@ -64,10 +92,15 @@ def hitung_zscore_multi(nilai, m, sd_m1, sd_m2, sd_m3, sd_p1, sd_p2, sd_p3):
         elif nilai <= sd_p3:
             return 2.0 + ((nilai - sd_p2) / (sd_p3 - sd_p2))
         else:
-            # Jika lebih ekstrem ke atas dari +3 SD
             return 3.0 + ((nilai - sd_p3) / (sd_p3 - sd_p2))
 
 if submitted:
+    # --- PROSES VALIDASI INPUT AWAL ---
+    is_valid, pesan_error = validasi_input_antropometri(berat, tinggi)
+    if not is_valid:
+        st.error(pesan_error)
+        st.stop()  # Menghentikan eksekusi jika data terdeteksi tertukar/tidak valid
+
     # --- LOGIKA UMUR BULAN PENUH (STANDAR KEMENKES) ---
     selisih_tahun = tgl_periksa.year - tgl_lahir.year
     selisih_bulan = tgl_periksa.month - tgl_lahir.month
@@ -80,7 +113,7 @@ if submitted:
     prefix = "Laki" if jk == "Laki-laki" else "Perempuan"
     
     try:
-        # Load file referensi kriteria WHO milik Dokter
+        # Load file referensi kriteria WHO
         df_bb = pd.read_excel(os.path.join(current_dir, f"BB_{prefix}.xlsx"))
         df_tb = pd.read_excel(os.path.join(current_dir, f"TB_{prefix}.xlsx"))
         
