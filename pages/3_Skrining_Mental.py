@@ -98,7 +98,7 @@ with col_id1:
 
 with col_id2:
     tgl_lahir = st.date_input(
-        "Tanggal Lahir:", value=datetime.date(2000, 1, 1), key="id_tgl"
+        "Tanggal Lahir:", value=datetime.date(1920, 1, 1), key="id_tgl"
     )
     pemeriksa = st.text_input(
         "Alamat:", key="id_nakes"
