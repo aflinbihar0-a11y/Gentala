@@ -97,8 +97,16 @@ with col_id1:
     nik = st.text_input("Nomor Hp (Boleh dikosongkan):", key="id_nik")
 
 with col_id2:
+    min_date = datetime.date(1920, 1, 1)
+    max_date = datetime.date.today()
+    default_date = datetime.date(1995, 1, 1)  # Mengatur posisi kalender ke tahun 1995
+
     tgl_lahir = st.date_input(
-        "Tanggal Lahir:", value=datetime.date(1920, 1, 1), key="id_tgl"
+        "Tanggal Lahir:",
+        value=default_date,
+        min_value=min_date,
+        max_value=max_date,
+        key="id_tgl"
     )
     pemeriksa = st.text_input(
         "Alamat:", key="id_nakes"
