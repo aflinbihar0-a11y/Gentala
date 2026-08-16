@@ -239,22 +239,28 @@ with tab2:
             else:
                 row_data = row.iloc[0]
                 
-                # Toleransi nama header kolom (berjaga-jaga jika ada perbedaan spasi di file Excel)
+                # Toleransi nama header kolom
                 sd3neg = row_data['- 3 SD'] if '- 3 SD' in row_data else row_data['-3 SD']
                 sd2neg = row_data['- 2 SD'] if '- 2 SD' in row_data else row_data['-2 SD']
                 sd1pos = row_data['+1 SD'] if '+1 SD' in row_data else row_data['+ 1 SD']
                 sd2pos = row_data['+2 SD'] if '+2 SD' in row_data else row_data['+ 2 SD']
 
+                # Penentuan Kategori Status Gizi (Permenkes RI)
                 if imt_rem < sd3neg:
-                    kat_rem, box_type = "Gizi Buruk (Sangat Kurus / Severely Wasted)", st.error
+                    kat_rem = "Gizi buruk (severely thinness)"
+                    box_type = st.error
                 elif sd3neg <= imt_rem < sd2neg:
-                    kat_rem, box_type = "Gizi Kurang (Kurus / Wasted)", st.warning
+                    kat_rem = "Gizi kurang (thinness)"
+                    box_type = st.warning
                 elif sd2neg <= imt_rem <= sd1pos:
-                    kat_rem, box_type = "Gizi Baik (Normal)", st.success
+                    kat_rem = "Gizi baik (normal)"
+                    box_type = st.success
                 elif sd1pos < imt_rem <= sd2pos:
-                    kat_rem, box_type = "Berisiko Gizi Lebih (Overweight)", st.warning
+                    kat_rem = "Gizi lebih (overweight)"
+                    box_type = st.warning
                 else:
-                    kat_rem, box_type = "Obesitas (Obese)", st.error
+                    kat_rem = "Obesitas (obese)"
+                    box_type = st.error
 
                 st.markdown("#### 📊 Hasil Evaluasi Status Gizi IMT/U")
                 col_r1, col_r2 = st.columns(2)
@@ -263,6 +269,18 @@ with tab2:
                 with col_r2:
                     st.write("**Status Gizi (Z-Score):**")
                     box_type(kat_rem)
+
+                # Tabel Referensi Interpretasi Permenkes
+                with st.expander("📖 Lihat Tabel Referensi Ambang Batas (Z-Score) Kemenkes"):
+                    st.markdown("""
+                    | Indeks | Kategori Status Gizi | Ambang Batas (Z-Score) |
+                    | :--- | :--- | :--- |
+                    | **Indeks Massa Tubuh menurut Umur (IMT/U) anak usia 5 - 18 tahun** | Gizi buruk (*severely thinness*) | < -3 SD |
+                    | | Gizi kurang (*thinness*) | -3 SD sd < -2 SD |
+                    | | Gizi baik (*normal*) | -2 SD sd +1 SD |
+                    | | Gizi lebih (*overweight*) | +1 SD sd +2 SD |
+                    | | Obesitas (*obese*) | > +2 SD |
+                    """)
 
         except Exception as err_imtu:
             st.error(f"Gagal membaca file referensi Excel IMT/U: {err_imtu}")
