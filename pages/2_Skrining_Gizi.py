@@ -335,7 +335,6 @@ with tab3:
     with col_dw1:
         nama_dw = st.text_input("Nama Pasien:", key="tab3_nama")
         bb_dw = st.number_input("Berat Badan (kg):", min_value=20.0, max_value=250.0, value=60.0, step=0.1, key="tab3_bb")
-    with col_dw2:
         tb_dw = st.number_input("Tinggi Badan (cm):", min_value=100.0, max_value=250.0, value=160.0, step=0.5, key="tab3_tb")
 
     if st.button("HITUNG IMT DEWASA", key="btn_tab3"):
