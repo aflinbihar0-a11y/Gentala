@@ -193,38 +193,76 @@ with tab1:
             st.error(f"Error: {e}")
 
 # =========================================================================
-# TAB 2: ANAK 5-18 TAHUN (IMT/U PRESISI & SIMPAN KE SHEET3)
+# TAB 2: ANAK 5-18 TAHUN (FORM BERSIH TANPA DEFAULT VALUE)
 # =========================================================================
 with tab2:
     st.markdown("### 📏 Skrining Gizi Anak & Remaja (5-18 Tahun)")
     
     col_id1, col_id2 = st.columns(2)
     with col_id1:
-        nama_rem = st.text_input("Nama Anak/Remaja:", key="tab2_nama")
-        jk_rem = st.selectbox("Jenis Kelamin:", ["Laki-laki", "Perempuan"], key="tab2_jk")
+        nama_rem = st.text_input("Nama Anak/Remaja:", placeholder="Masukkan nama pasien", key="tab2_nama")
+        jk_rem = st.selectbox(
+            "Jenis Kelamin:", 
+            options=["-- Pilih Jenis Kelamin --", "Laki-laki", "Perempuan"], 
+            index=0, 
+            key="tab2_jk"
+        )
     with col_id2:
-        tgl_lahir_rem = st.date_input("Tanggal Lahir:", value=datetime.date(2015, 1, 1), key="tab2_tgl_lahir")
-        tgl_periksa_rem = st.date_input("Tanggal Pemeriksaan:", value=datetime.date.today(), key="tab2_tgl_periksa")
+        tgl_lahir_rem = st.date_input(
+            "Tanggal Lahir:", 
+            value=None, 
+            key="tab2_tgl_lahir"
+        )
+        tgl_periksa_rem = st.date_input(
+            "Tanggal Pemeriksaan:", 
+            value=datetime.date.today(), 
+            key="tab2_tgl_periksa"
+        )
 
-    # Hitung Total Bulan Penuh
-    total_bulan_rem = (tgl_periksa_rem.year - tgl_lahir_rem.year) * 12 + (tgl_periksa_rem.month - tgl_lahir_rem.month)
-    if tgl_periksa_rem.day < tgl_lahir_rem.day:
-        total_bulan_rem -= 1
+    # Kalkulasi Umur Hanya Jika Tanggal Lahir Sudah Diisi
+    tahun_lookup, bulan_lookup, total_bulan_rem = None, None, None
+    if tgl_lahir_rem is not None:
+        total_bulan_rem = (tgl_periksa_rem.year - tgl_lahir_rem.year) * 12 + (tgl_periksa_rem.month - tgl_lahir_rem.month)
+        if tgl_periksa_rem.day < tgl_lahir_rem.day:
+            total_bulan_rem -= 1
 
-    tahun_lookup = total_bulan_rem // 12
-    bulan_lookup = total_bulan_rem % 12
+        tahun_lookup = total_bulan_rem // 12
+        bulan_lookup = total_bulan_rem % 12
 
-    st.info(f"ℹ️ **Umur Terkalkulasi:** {tahun_lookup} Tahun {bulan_lookup} Bulan ({total_bulan_rem} Bulan)")
+        st.info(f"ℹ️ **Umur Terkalkulasi:** {tahun_lookup} Tahun {bulan_lookup} Bulan ({total_bulan_rem} Bulan)")
 
     col_bb, col_tb = st.columns(2)
     with col_bb:
-        bb_rem = st.number_input("Berat Badan (kg):", min_value=5.0, max_value=150.0, value=33.0, step=0.1, key="tab2_bb")
+        bb_rem = st.number_input(
+            "Berat Badan (kg):", 
+            min_value=5.0, 
+            max_value=150.0, 
+            value=None, 
+            placeholder="Contoh: 33.0", 
+            step=0.1, 
+            key="tab2_bb"
+        )
     with col_tb:
-        tb_rem = st.number_input("Tinggi Badan (cm):", min_value=50.0, max_value=220.0, value=140.0, step=0.5, key="tab2_tb")
+        tb_rem = st.number_input(
+            "Tinggi Badan (cm):", 
+            min_value=50.0, 
+            max_value=220.0, 
+            value=None, 
+            placeholder="Contoh: 140.0", 
+            step=0.5, 
+            key="tab2_tb"
+        )
 
     if st.button("HITUNG & SIMPAN STATUS GIZI (IMT/U)", key="btn_tab2"):
+        # Validasi Kelengkapan Input Form
         if not nama_rem.strip():
             st.warning("⚠️ Mohon isi nama anak/remaja terlebih dahulu.")
+        elif jk_rem == "-- Pilih Jenis Kelamin --":
+            st.warning("⚠️ Mohon pilih jenis kelamin pasien terlebih dahulu.")
+        elif tgl_lahir_rem is None:
+            st.warning("⚠️ Mohon isi tanggal lahir pasien.")
+        elif bb_rem is None or tb_rem is None:
+            st.warning("⚠️ Mohon isi Berat Badan dan Tinggi Badan pasien.")
         else:
             tb_m = tb_rem / 100
             imt_rem = bb_rem / (tb_m ** 2)
