@@ -273,25 +273,42 @@ with tab2:
                     st.write(f"**Z-Score IMT/U:** `{z_imtu:.2f} SD`")
                     st.caption(f"Status: {kat_rem}")
 
-                    # --- PROSES SIMPAN KE SHEET3 ---
-                    waktu_skrg = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    row_to_save = [
-                        waktu_skrg,
-                        nama_rem,
-                        jk_rem,
-                        str(tgl_lahir_rem),
-                        str(tgl_periksa_rem),
-                        tahun_lookup,
-                        bulan_lookup,
-                        bb_rem,
-                        tb_rem,
-                        round(imt_rem, 2),
-                        round(z_imtu, 2),
-                        kat_rem
-                    ]
+                    # --- PROSES SIMPAN KE GOOGLE SPREADSHEET (SHEET3) ---
+                    with st.spinner("Sedang menyimpan data ke database Google Sheets (Sheet3)..."):
+                        try:
+                            client_sheet = koneksi_spreadsheet().spreadsheet
+                            sheet3 = client_sheet.worksheet("Sheet3")
 
-                    if save_to_sheet3(row_to_save):
-                        st.success("✅ Data pasien dan hasil skrining berhasil disimpan ke Sheet3!")
+                            # Buat header otomatis jika Sheet3 masih kosong
+                            if len(sheet3.get_all_values()) == 0:
+                                header = [
+                                    "Waktu Input", "Nama Anak", "Jenis Kelamin", 
+                                    "Tgl Lahir", "Tgl Periksa", "Umur (Tahun)", "Umur (Bulan)", 
+                                    "BB (kg)", "TB (cm)", "IMT (kg/m²)", "Z-Score IMT/U (SD)", "Status Gizi"
+                                ]
+                                sheet3.append_row(header)
+
+                            waktu_skrg = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            baris_baru_tab2 = [
+                                waktu_skrg,
+                                nama_rem,
+                                jk_rem,
+                                str(tgl_lahir_rem),
+                                str(tgl_periksa_rem),
+                                tahun_lookup,
+                                bulan_lookup,
+                                bb_rem,
+                                tb_rem,
+                                f"{imt_rem:.2f}",
+                                f"{z_imtu:.2f}",
+                                kat_rem
+                            ]
+
+                            sheet3.append_row(baris_baru_tab2)
+                            st.success("✅ Data pasien dan hasil skrining berhasil disimpan ke Sheet3!")
+
+                        except Exception as sheet_err:
+                            st.error(f"Gagal menyimpan ke Sheet3: {sheet_err}")
 
                     # Tabel Referensi Permenkes
                     with st.expander("📖 Lihat Tabel Referensi Ambang Batas (Z-Score) Kemenkes"):
