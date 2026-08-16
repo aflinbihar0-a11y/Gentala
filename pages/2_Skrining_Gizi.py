@@ -20,10 +20,11 @@ def koneksi_spreadsheet():
     return sheet
 
 # --- CACHE DATA REFERENCE EXCEL (IMT/U 5-18 TAHUN) ---
+# Menggunakan header=1 karena file Excel IMT/U memiliki merged header di baris pertama
 @st.cache_data
 def load_ref_imtu():
-    df_l = pd.read_excel(os.path.join(current_dir, "IMT-U 5-18 thn L.xlsx"))
-    df_p = pd.read_excel(os.path.join(current_dir, "IMT-U 5-18 Thn P.xlsx"))
+    df_l = pd.read_excel(os.path.join(current_dir, "IMT-U 5-18 thn L.xlsx"), header=1)
+    df_p = pd.read_excel(os.path.join(current_dir, "IMT-U 5-18 Thn P.xlsx"), header=1)
     return df_l, df_p
 
 # --- FUNGSI VALIDASI ANTROPOMETRI (SANITY CHECK BALITA) ---
@@ -83,7 +84,7 @@ tab1, tab2, tab3 = st.tabs([
 ])
 
 # =========================================================================
-# TAB 1: ANAK 0-5 TAHUN (KODE ASLI ANDA)
+# TAB 1: ANAK 0-5 TAHUN (BALITA)
 # =========================================================================
 with tab1:
     with st.form("input_data_balita"):
@@ -192,7 +193,7 @@ with tab1:
             st.error(f"Error: {e}")
 
 # =========================================================================
-# TAB 2: ANAK 5-18 TAHUN (IMT/U PRESISI REFERENSI EXCEL)
+# TAB 2: ANAK 5-18 TAHUN (IMT/U PRESISI REFERENSI EXCEL TAHUN & BULAN)
 # =========================================================================
 with tab2:
     st.markdown("### 📏 Skrining Gizi Anak & Remaja (5-18 Tahun)")
@@ -205,14 +206,16 @@ with tab2:
         tgl_lahir_rem = st.date_input("Tanggal Lahir:", value=datetime.date(2015, 1, 1), key="tab2_tgl_lahir")
         tgl_periksa_rem = st.date_input("Tanggal Pemeriksaan:", value=datetime.date.today(), key="tab2_tgl_periksa")
 
-    # Hitung Umur dalam Bulan Penuh
+    # Hitung Total Bulan Penuh
     total_bulan_rem = (tgl_periksa_rem.year - tgl_lahir_rem.year) * 12 + (tgl_periksa_rem.month - tgl_lahir_rem.month)
     if tgl_periksa_rem.day < tgl_lahir_rem.day:
         total_bulan_rem -= 1
 
-    tahun_display = total_bulan_rem // 12
-    bulan_sisa = total_bulan_rem % 12
-    st.info(f"ℹ️ **Umur Terkalkulasi:** {tahun_display} Tahun {bulan_sisa} Bulan ({total_bulan_rem} Bulan)")
+    # Break Down menjadi Tahun dan Bulan Sisa untuk Pencocokan Kolom Excel
+    tahun_lookup = total_bulan_rem // 12
+    bulan_lookup = total_bulan_rem % 12
+
+    st.info(f"ℹ️ **Umur Terkalkulasi:** {tahun_lookup} Tahun {bulan_lookup} Bulan ({total_bulan_rem} Bulan)")
 
     col_bb, col_tb = st.columns(2)
     with col_bb:
@@ -228,29 +231,30 @@ with tab2:
             df_l, df_p = load_ref_imtu()
             df_selected = df_l if jk_rem == "Laki-laki" else df_p
             
-            # Cari baris yang sesuai umur bulan pada tabel Excel
-            # Catatan: Sesuaikan nama kolom berikut dengan header Excel Anda (misal: 'Umur', '-3SD', dll)
-            row = df_selected[df_selected['Umur (bulan)'] == total_bulan_rem]
+            # Pencocokan baris berdasarkan kombinasi kolom 'Tahun' DAN 'Bulan'
+            row = df_selected[(df_selected['Tahun'] == tahun_lookup) & (df_selected['Bulan'] == bulan_lookup)]
             
             if row.empty:
-                st.warning("⚠️ Umur di luar jangkauan tabel referensi (5-18 Tahun).")
+                st.warning(f"⚠️ Umur ({tahun_lookup} Thn {bulan_lookup} Bln) di luar jangkauan tabel referensi (5-18 Tahun).")
             else:
                 row_data = row.iloc[0]
-                sd3neg = row_data['-3 SD']
-                sd2neg = row_data['-2 SD']
-                sd1pos = row_data['+1 SD']
-                sd2pos = row_data['+2 SD']
+                
+                # Toleransi nama header kolom (berjaga-jaga jika ada perbedaan spasi di file Excel)
+                sd3neg = row_data['- 3 SD'] if '- 3 SD' in row_data else row_data['-3 SD']
+                sd2neg = row_data['- 2 SD'] if '- 2 SD' in row_data else row_data['-2 SD']
+                sd1pos = row_data['+1 SD'] if '+1 SD' in row_data else row_data['+ 1 SD']
+                sd2pos = row_data['+2 SD'] if '+2 SD' in row_data else row_data['+ 2 SD']
 
                 if imt_rem < sd3neg:
-                    kat_rem, box_type = "Gizi Buruk (Sangat Kurus)", st.error
+                    kat_rem, box_type = "Gizi Buruk (Sangat Kurus / Severely Wasted)", st.error
                 elif sd3neg <= imt_rem < sd2neg:
-                    kat_rem, box_type = "Gizi Kurang (Kurus)", st.warning
+                    kat_rem, box_type = "Gizi Kurang (Kurus / Wasted)", st.warning
                 elif sd2neg <= imt_rem <= sd1pos:
                     kat_rem, box_type = "Gizi Baik (Normal)", st.success
                 elif sd1pos < imt_rem <= sd2pos:
-                    kat_rem, box_type = "Berisiko Gizi Lebih", st.warning
+                    kat_rem, box_type = "Berisiko Gizi Lebih (Overweight)", st.warning
                 else:
-                    kat_rem, box_type = "Obesitas", st.error
+                    kat_rem, box_type = "Obesitas (Obese)", st.error
 
                 st.markdown("#### 📊 Hasil Evaluasi Status Gizi IMT/U")
                 col_r1, col_r2 = st.columns(2)
