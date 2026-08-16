@@ -193,7 +193,7 @@ with tab1:
             st.error(f"Error: {e}")
 
 # =========================================================================
-# TAB 2: ANAK 5-18 TAHUN (IMT/U PRESISI REFERENSI EXCEL TAHUN & BULAN)
+# TAB 2: ANAK 5-18 TAHUN (IMT/U PRESISI & SIMPAN KE SHEET3)
 # =========================================================================
 with tab2:
     st.markdown("### 📏 Skrining Gizi Anak & Remaja (5-18 Tahun)")
@@ -222,73 +222,91 @@ with tab2:
     with col_tb:
         tb_rem = st.number_input("Tinggi Badan (cm):", min_value=50.0, max_value=220.0, value=140.0, step=0.5, key="tab2_tb")
 
-    if st.button("HITUNG STATUS GIZI (IMT/U)", key="btn_tab2"):
-        tb_m = tb_rem / 100
-        imt_rem = bb_rem / (tb_m ** 2)
-        
-        try:
-            df_l, df_p = load_ref_imtu()
-            df_selected = df_l if jk_rem == "Laki-laki" else df_p
+    if st.button("HITUNG & SIMPAN STATUS GIZI (IMT/U)", key="btn_tab2"):
+        if not nama_rem.strip():
+            st.warning("⚠️ Mohon isi nama anak/remaja terlebih dahulu.")
+        else:
+            tb_m = tb_rem / 100
+            imt_rem = bb_rem / (tb_m ** 2)
             
-            row = df_selected[(df_selected['Tahun'] == tahun_lookup) & (df_selected['Bulan'] == bulan_lookup)]
-            
-            if row.empty:
-                st.warning(f"⚠️ Umur ({tahun_lookup} Thn {bulan_lookup} Bln) di luar jangkauan tabel referensi (5-18 Tahun).")
-            else:
-                row_data = row.iloc[0]
+            try:
+                df_l, df_p = load_ref_imtu()
+                df_selected = df_l if jk_rem == "Laki-laki" else df_p
                 
-                # Toleransi nama header kolom dari Excel IMT/U
-                sd3neg = row_data['- 3 SD'] if '- 3 SD' in row_data else row_data['-3 SD']
-                sd2neg = row_data['- 2 SD'] if '- 2 SD' in row_data else row_data['-2 SD']
-                sd1neg = row_data['- 1 SD'] if '- 1 SD' in row_data else row_data['-1 SD']
-                median = row_data['Median'] if 'Median' in row_data else row_data['MEDIAN']
-                sd1pos = row_data['+1 SD'] if '+1 SD' in row_data else row_data['+ 1 SD']
-                sd2pos = row_data['+2 SD'] if '+2 SD' in row_data else row_data['+ 2 SD']
-                sd3pos = row_data['+3 SD'] if '+3 SD' in row_data else row_data['+ 3 SD']
-
-                # Perhitungan Nilai Eksak Z-Score IMT/U
-                z_imtu = hitung_zscore_multi(imt_rem, median, sd1neg, sd2neg, sd3neg, sd1pos, sd2pos, sd3pos)
-
-                # Klasifikasi Berdasarkan Kategori Permenkes
-                if imt_rem < sd3neg:
-                    kat_rem = "Gizi buruk (severely thinness)"
-                    box_type = st.error
-                elif sd3neg <= imt_rem < sd2neg:
-                    kat_rem = "Gizi kurang (thinness)"
-                    box_type = st.warning
-                elif sd2neg <= imt_rem <= sd1pos:
-                    kat_rem = "Gizi baik (normal)"
-                    box_type = st.success
-                elif sd1pos < imt_rem <= sd2pos:
-                    kat_rem = "Gizi lebih (overweight)"
-                    box_type = st.warning
+                row = df_selected[(df_selected['Tahun'] == tahun_lookup) & (df_selected['Bulan'] == bulan_lookup)]
+                
+                if row.empty:
+                    st.warning(f"⚠️ Umur ({tahun_lookup} Thn {bulan_lookup} Bln) di luar jangkauan tabel referensi (5-18 Tahun).")
                 else:
-                    kat_rem = "Obesitas (obese)"
-                    box_type = st.error
+                    row_data = row.iloc[0]
+                    
+                    # Toleransi nama header kolom dari Excel IMT/U
+                    sd3neg = row_data['- 3 SD'] if '- 3 SD' in row_data else row_data['-3 SD']
+                    sd2neg = row_data['- 2 SD'] if '- 2 SD' in row_data else row_data['-2 SD']
+                    sd1neg = row_data['- 1 SD'] if '- 1 SD' in row_data else row_data['-1 SD']
+                    median = row_data['Median'] if 'Median' in row_data else row_data['MEDIAN']
+                    sd1pos = row_data['+1 SD'] if '+1 SD' in row_data else row_data['+ 1 SD']
+                    sd2pos = row_data['+2 SD'] if '+2 SD' in row_data else row_data['+ 2 SD']
+                    sd3pos = row_data['+3 SD'] if '+3 SD' in row_data else row_data['+ 3 SD']
 
-                st.divider()
-                st.subheader(f"Hasil Analisis: {nama_rem}")
-                st.info(f"Analisis berdasarkan Umur: {tahun_lookup} Tahun {bulan_lookup} Bulan (Standar Buku Antropometri Kemenkes)")
+                    # Perhitungan Nilai Eksak Z-Score IMT/U
+                    z_imtu = hitung_zscore_multi(imt_rem, median, sd1neg, sd2neg, sd3neg, sd1pos, sd2pos, sd3pos)
 
-                # Tampilan Z-Score dan Status Gizi
-                st.write(f"**Nilai IMT Pasien:** `{imt_rem:.2f} kg/m²`")
-                st.write(f"**Z-Score IMT/U:** `{z_imtu:.2f} SD`")
-                st.caption(f"Status: {kat_rem}")
+                    # Klasifikasi Berdasarkan Kategori Permenkes
+                    if imt_rem < sd3neg:
+                        kat_rem = "Gizi buruk (severely thinness)"
+                    elif sd3neg <= imt_rem < sd2neg:
+                        kat_rem = "Gizi kurang (thinness)"
+                    elif sd2neg <= imt_rem <= sd1pos:
+                        kat_rem = "Gizi baik (normal)"
+                    elif sd1pos < imt_rem <= sd2pos:
+                        kat_rem = "Gizi lebih (overweight)"
+                    else:
+                        kat_rem = "Obesitas (obese)"
 
-                # Tabel Referensi Permenkes
-                with st.expander("📖 Lihat Tabel Referensi Ambang Batas (Z-Score) Kemenkes"):
-                    st.markdown("""
-                    | Indeks | Kategori Status Gizi | Ambang Batas (Z-Score) |
-                    | :--- | :--- | :--- |
-                    | **Indeks Massa Tubuh menurut Umur (IMT/U) anak usia 5 - 18 tahun** | Gizi buruk (*severely thinness*) | < -3 SD |
-                    | | Gizi kurang (*thinness*) | -3 SD sd < -2 SD |
-                    | | Gizi baik (*normal*) | -2 SD sd +1 SD |
-                    | | Gizi lebih (*overweight*) | +1 SD sd +2 SD |
-                    | | Obesitas (*obese*) | > +2 SD |
-                    """)
+                    st.divider()
+                    st.subheader(f"Hasil Analisis: {nama_rem}")
+                    st.info(f"Analisis berdasarkan Umur: {tahun_lookup} Tahun {bulan_lookup} Bulan (Standar Buku Antropometri Kemenkes)")
 
-        except Exception as err_imtu:
-            st.error(f"Gagal membaca file referensi Excel IMT/U: {err_imtu}")
+                    # Tampilan Z-Score dan Status Gizi
+                    st.write(f"**Nilai IMT Pasien:** `{imt_rem:.2f} kg/m²`")
+                    st.write(f"**Z-Score IMT/U:** `{z_imtu:.2f} SD`")
+                    st.caption(f"Status: {kat_rem}")
+
+                    # --- PROSES SIMPAN KE SHEET3 ---
+                    waktu_skrg = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    row_to_save = [
+                        waktu_skrg,
+                        nama_rem,
+                        jk_rem,
+                        str(tgl_lahir_rem),
+                        str(tgl_periksa_rem),
+                        tahun_lookup,
+                        bulan_lookup,
+                        bb_rem,
+                        tb_rem,
+                        round(imt_rem, 2),
+                        round(z_imtu, 2),
+                        kat_rem
+                    ]
+
+                    if save_to_sheet3(row_to_save):
+                        st.success("✅ Data pasien dan hasil skrining berhasil disimpan ke Sheet3!")
+
+                    # Tabel Referensi Permenkes
+                    with st.expander("📖 Lihat Tabel Referensi Ambang Batas (Z-Score) Kemenkes"):
+                        st.markdown("""
+                        | Indeks | Kategori Status Gizi | Ambang Batas (Z-Score) |
+                        | :--- | :--- | :--- |
+                        | **Indeks Massa Tubuh menurut Umur (IMT/U) anak usia 5 - 18 tahun** | Gizi buruk (*severely thinness*) | < -3 SD |
+                        | | Gizi kurang (*thinness*) | -3 SD sd < -2 SD |
+                        | | Gizi baik (*normal*) | -2 SD sd +1 SD |
+                        | | Gizi lebih (*overweight*) | +1 SD sd +2 SD |
+                        | | Obesitas (*obese*) | > +2 SD |
+                        """)
+
+            except Exception as err_imtu:
+                st.error(f"Gagal membaca file referensi Excel IMT/U: {err_imtu}")
 
 # =========================================================================
 # TAB 3: INDEKS MASSA TUBUH (DEWASA > 18 TAHUN)
