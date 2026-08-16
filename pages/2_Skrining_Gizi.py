@@ -211,7 +211,6 @@ with tab2:
     if tgl_periksa_rem.day < tgl_lahir_rem.day:
         total_bulan_rem -= 1
 
-    # Break Down menjadi Tahun dan Bulan Sisa untuk Pencocokan Kolom Excel
     tahun_lookup = total_bulan_rem // 12
     bulan_lookup = total_bulan_rem % 12
 
@@ -219,9 +218,9 @@ with tab2:
 
     col_bb, col_tb = st.columns(2)
     with col_bb:
-        bb_rem = st.number_input("Berat Badan (kg):", min_value=5.0, max_value=150.0, value=30.0, step=0.1, key="tab2_bb")
+        bb_rem = st.number_input("Berat Badan (kg):", min_value=5.0, max_value=150.0, value=33.0, step=0.1, key="tab2_bb")
     with col_tb:
-        tb_rem = st.number_input("Tinggi Badan (cm):", min_value=50.0, max_value=220.0, value=130.0, step=0.5, key="tab2_tb")
+        tb_rem = st.number_input("Tinggi Badan (cm):", min_value=50.0, max_value=220.0, value=140.0, step=0.5, key="tab2_tb")
 
     if st.button("HITUNG STATUS GIZI (IMT/U)", key="btn_tab2"):
         tb_m = tb_rem / 100
@@ -231,7 +230,6 @@ with tab2:
             df_l, df_p = load_ref_imtu()
             df_selected = df_l if jk_rem == "Laki-laki" else df_p
             
-            # Pencocokan baris berdasarkan kombinasi kolom 'Tahun' DAN 'Bulan'
             row = df_selected[(df_selected['Tahun'] == tahun_lookup) & (df_selected['Bulan'] == bulan_lookup)]
             
             if row.empty:
@@ -239,13 +237,19 @@ with tab2:
             else:
                 row_data = row.iloc[0]
                 
-                # Toleransi nama header kolom
+                # Toleransi nama header kolom dari Excel IMT/U
                 sd3neg = row_data['- 3 SD'] if '- 3 SD' in row_data else row_data['-3 SD']
                 sd2neg = row_data['- 2 SD'] if '- 2 SD' in row_data else row_data['-2 SD']
+                sd1neg = row_data['- 1 SD'] if '- 1 SD' in row_data else row_data['-1 SD']
+                median = row_data['Median'] if 'Median' in row_data else row_data['MEDIAN']
                 sd1pos = row_data['+1 SD'] if '+1 SD' in row_data else row_data['+ 1 SD']
                 sd2pos = row_data['+2 SD'] if '+2 SD' in row_data else row_data['+ 2 SD']
+                sd3pos = row_data['+3 SD'] if '+3 SD' in row_data else row_data['+ 3 SD']
 
-                # Penentuan Kategori Status Gizi (Permenkes RI)
+                # Perhitungan Nilai Eksak Z-Score IMT/U
+                z_imtu = hitung_zscore_multi(imt_rem, median, sd1neg, sd2neg, sd3neg, sd1pos, sd2pos, sd3pos)
+
+                # Klasifikasi Berdasarkan Kategori Permenkes
                 if imt_rem < sd3neg:
                     kat_rem = "Gizi buruk (severely thinness)"
                     box_type = st.error
@@ -262,15 +266,16 @@ with tab2:
                     kat_rem = "Obesitas (obese)"
                     box_type = st.error
 
-                st.markdown("#### 📊 Hasil Evaluasi Status Gizi IMT/U")
-                col_r1, col_r2 = st.columns(2)
-                with col_r1:
-                    st.metric("Nilai IMT Pasien", f"{imt_rem:.2f} kg/m²")
-                with col_r2:
-                    st.write("**Status Gizi (Z-Score):**")
-                    box_type(kat_rem)
+                st.divider()
+                st.subheader(f"Hasil Analisis: {nama_rem}")
+                st.info(f"Analisis berdasarkan Umur: {tahun_lookup} Tahun {bulan_lookup} Bulan (Standar Buku Antropometri Kemenkes)")
 
-                # Tabel Referensi Interpretasi Permenkes
+                # Tampilan Z-Score dan Status Gizi
+                st.write(f"**Nilai IMT Pasien:** `{imt_rem:.2f} kg/m²`")
+                st.write(f"**Z-Score IMT/U:** `{z_imtu:.2f} SD`")
+                st.caption(f"Status: {kat_rem}")
+
+                # Tabel Referensi Permenkes
                 with st.expander("📖 Lihat Tabel Referensi Ambang Batas (Z-Score) Kemenkes"):
                     st.markdown("""
                     | Indeks | Kategori Status Gizi | Ambang Batas (Z-Score) |
