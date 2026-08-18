@@ -22,7 +22,7 @@ def plot_kurva_zscore(df_ref, x_col, x_val, y_val, title_text, x_label, y_label)
 
     fig = go.Figure()
 
-    # Garis-garis SD Kemenkes
+    # Garis-garis SD Standar Kemenkes
     fig.add_trace(go.Scatter(x=df_chart[x_col], y=df_chart[c_sd3neg], mode='lines', name='-3 SD', line=dict(color='#8B0000', width=1.5)))
     fig.add_trace(go.Scatter(x=df_chart[x_col], y=df_chart[c_sd2neg], mode='lines', name='-2 SD', line=dict(color='#FF0000', width=1.5)))
     fig.add_trace(go.Scatter(x=df_chart[x_col], y=df_chart[c_sd1neg], mode='lines', name='-1 SD', line=dict(color='#FFD700', width=1.5)))
@@ -36,8 +36,8 @@ def plot_kurva_zscore(df_ref, x_col, x_val, y_val, title_text, x_label, y_label)
         x=[x_val],
         y=[y_val],
         mode='markers',
-        name='Anak Anda',
-        marker=dict(color='blue', size=12, symbol='circle')
+        name='Posisi Pasien',
+        marker=dict(color='blue', size=13, symbol='circle', line=dict(color='white', width=2))
     ))
 
     fig.update_layout(
@@ -217,9 +217,7 @@ with tab1:
                 else: status_bbtb = "Obesitas"
                 st.caption(f"Status: {status_bbtb}")
 
-            # =========================================================
-            # 📈 TAMPILAN 3 KURVA PERTUMBUHAN INTERAKTIF (TAB 1)
-            # =========================================================
+            # 📈 GRAFIS KURVA BALITA (TAB 1)
             st.markdown("#### 📈 Grafis Kurva Pertumbuhan Pasien")
             tab_k1, tab_k2, tab_k3 = st.tabs([
                 "📊 BB Menurut Umur (BB/U)", 
@@ -264,7 +262,7 @@ with tab1:
                 )
                 st.plotly_chart(fig_bbtb, use_container_width=True)
 
-            # PROSES SIMPAN KE GOOGLE SPREADSHEET
+            # SIMPAN KE SPREADSHEET
             with st.spinner("Sedang menyimpan data ke database Google Sheets..."):
                 try:
                     sheet = koneksi_spreadsheet()
@@ -283,7 +281,7 @@ with tab1:
             st.error(f"Error: {e}")
 
 # =========================================================================
-# TAB 2: ANAK 5-18 TAHUN (IMT/U PRESISI & SIMPAN KE SHEET3)
+# TAB 2: ANAK 5-18 TAHUN (IMT/U PRESISI & KURVA INTERAKTIF)
 # =========================================================================
 with tab2:
     st.markdown("### 📏 Skrining Gizi Anak & Remaja (5-18 Tahun)")
@@ -320,8 +318,11 @@ with tab2:
             
             try:
                 df_l, df_p = load_ref_imtu()
-                df_selected = df_l if jk_rem == "Laki-laki" else df_p
+                df_selected = df_l.copy() if jk_rem == "Laki-laki" else df_p.copy()
                 
+                # Tambahkan kolom Total_Bulan untuk x-axis grafik kurva
+                df_selected['Total_Bulan'] = df_selected['Tahun'] * 12 + df_selected['Bulan']
+
                 row = df_selected[(df_selected['Tahun'] == tahun_lookup) & (df_selected['Bulan'] == bulan_lookup)]
                 
                 if row.empty:
@@ -359,18 +360,16 @@ with tab2:
                     st.caption(f"Status: {kat_rem}")
 
                     # =========================================================
-                    # 📈 TAMPILAN KURVA IMT/U (TAB 2)
+                    # 📈 PENAMBAHAN KURVA INTERAKTIF IMT/U
                     # =========================================================
                     st.markdown("#### 📈 Grafis Kurva Pertumbuhan Pasien (IMT/U)")
-                    df_chart_tab2 = df_selected.copy()
-                    df_chart_tab2['Total_Bulan'] = df_chart_tab2['Tahun'] * 12 + df_chart_tab2['Bulan']
                     
                     fig_imtu = plot_kurva_zscore(
-                        df_chart_tab2,
+                        df_selected,
                         x_col='Total_Bulan',
                         x_val=total_bulan_rem,
                         y_val=imt_rem,
-                        title_text="Kurva Indeks Massa Tubuh Menurut Umur (IMT/U)",
+                        title_text=f"Kurva Indeks Massa Tubuh Menurut Umur (IMT/U) - {jk_rem}",
                         x_label="Umur (Bulan)",
                         y_label="IMT (kg/m²)"
                     )
