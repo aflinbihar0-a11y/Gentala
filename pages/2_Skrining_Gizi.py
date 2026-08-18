@@ -1,16 +1,63 @@
-import datetime
 import os
-import gspread
+import datetime
 import pandas as pd
 import streamlit as st
+import gspread
 from google.oauth2.service_account import Credentials
+import plotly.graph_objects as go
 
+# =========================================================================
+# FUNGSI HELPER: KURVA PERTUMBUHAN INTERAKTIF
+# =========================================================================
+def plot_kurva_zscore(df_ref, x_col, x_val, y_val, title_text, x_label, y_label):
+    df_chart = df_ref.copy().sort_values(x_col)
+
+    c_sd3neg = '- 3 SD' if '- 3 SD' in df_chart.columns else '-3 SD'
+    c_sd2neg = '- 2 SD' if '- 2 SD' in df_chart.columns else '-2 SD'
+    c_sd1neg = '- 1 SD' if '- 1 SD' in df_chart.columns else '-1 SD'
+    c_median = 'Median' if 'Median' in df_chart.columns else 'MEDIAN'
+    c_sd1pos = '+1 SD' if '+1 SD' in df_chart.columns else '+ 1 SD'
+    c_sd2pos = '+2 SD' if '+2 SD' in df_chart.columns else '+ 2 SD'
+    c_sd3pos = '+3 SD' if '+3 SD' in df_chart.columns else '+ 3 SD'
+
+    fig = go.Figure()
+
+    # Garis-garis SD Kemenkes
+    fig.add_trace(go.Scatter(x=df_chart[x_col], y=df_chart[c_sd3neg], mode='lines', name='-3 SD', line=dict(color='#8B0000', width=1.5)))
+    fig.add_trace(go.Scatter(x=df_chart[x_col], y=df_chart[c_sd2neg], mode='lines', name='-2 SD', line=dict(color='#FF0000', width=1.5)))
+    fig.add_trace(go.Scatter(x=df_chart[x_col], y=df_chart[c_sd1neg], mode='lines', name='-1 SD', line=dict(color='#FFD700', width=1.5)))
+    fig.add_trace(go.Scatter(x=df_chart[x_col], y=df_chart[c_median], mode='lines', name='Median', line=dict(color='#00FF00', width=2)))
+    fig.add_trace(go.Scatter(x=df_chart[x_col], y=df_chart[c_sd1pos], mode='lines', name='+1 SD', line=dict(color='#FFD700', width=1.5)))
+    fig.add_trace(go.Scatter(x=df_chart[x_col], y=df_chart[c_sd2pos], mode='lines', name='+2 SD', line=dict(color='#FF0000', width=1.5)))
+    fig.add_trace(go.Scatter(x=df_chart[x_col], y=df_chart[c_sd3pos], mode='lines', name='+3 SD', line=dict(color='#8B0000', width=1.5)))
+
+    # Plot Titik Posisi Pasien
+    fig.add_trace(go.Scatter(
+        x=[x_val],
+        y=[y_val],
+        mode='markers',
+        name='Anak Anda',
+        marker=dict(color='blue', size=12, symbol='circle')
+    ))
+
+    fig.update_layout(
+        title=f"<b>{title_text}</b>",
+        xaxis_title=x_label,
+        yaxis_title=y_label,
+        legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5),
+        margin=dict(l=20, r=20, t=40, b=20),
+        template="plotly_white"
+    )
+
+    return fig
+
+# =========================================================================
+# CONFIG & HELPER SETUP
+# =========================================================================
 st.set_page_config(page_title="Grow.TrackID - Skrining Gizi", page_icon="🩺", layout="centered")
 
-# --- SETUP PATH OTOMATIS FOR EXCEL ---
 current_dir = os.path.dirname(__file__)
 
-# --- KONEKSI GOOGLE SPREADSHEET ---
 def koneksi_spreadsheet():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     creds_dict = st.secrets["gcp_service_account"] 
@@ -19,15 +66,12 @@ def koneksi_spreadsheet():
     sheet = client.open("GrowTrack Database").worksheet("Sheet2")
     return sheet
 
-# --- CACHE DATA REFERENCE EXCEL (IMT/U 5-18 TAHUN) ---
-# Menggunakan header=1 karena file Excel IMT/U memiliki merged header di baris pertama
 @st.cache_data
 def load_ref_imtu():
     df_l = pd.read_excel(os.path.join(current_dir, "IMT-U 5-18 thn L.xlsx"), header=1)
     df_p = pd.read_excel(os.path.join(current_dir, "IMT-U 5-18 Thn P.xlsx"), header=1)
     return df_l, df_p
 
-# --- FUNGSI VALIDASI ANTROPOMETRI (SANITY CHECK BALITA) ---
 def validasi_input_antropometri(bb, tb):
     if tb <= bb:
         return False, (
@@ -48,7 +92,6 @@ def validasi_input_antropometri(bb, tb):
         )
     return True, ""
 
-# --- FUNGSI Z-SCORE KONDISIONAL MULTI-LEVEL (PRESISI KEMENKES BALITA) ---
 def hitung_zscore_multi(nilai, m, sd_m1, sd_m2, sd_m3, sd_p1, sd_p2, sd_p3):
     if nilai == m:
         return 0.0
@@ -174,6 +217,53 @@ with tab1:
                 else: status_bbtb = "Obesitas"
                 st.caption(f"Status: {status_bbtb}")
 
+            # =========================================================
+            # 📈 TAMPILAN 3 KURVA PERTUMBUHAN INTERAKTIF (TAB 1)
+            # =========================================================
+            st.markdown("#### 📈 Grafis Kurva Pertumbuhan Pasien")
+            tab_k1, tab_k2, tab_k3 = st.tabs([
+                "📊 BB Menurut Umur (BB/U)", 
+                "📏 TB/PB Menurut Umur (TB/U)", 
+                "⚖️ BB Menurut TB/PB (BB/TB)"
+            ])
+
+            with tab_k1:
+                fig_bbu = plot_kurva_zscore(
+                    df_bb, 
+                    x_col='Umur (bulan)', 
+                    x_val=umur_bulan, 
+                    y_val=berat, 
+                    title_text="Kurva Berat Badan Menurut Umur (BB/U)", 
+                    x_label="Umur (Bulan)", 
+                    y_label="Berat Badan (kg)"
+                )
+                st.plotly_chart(fig_bbu, use_container_width=True)
+
+            with tab_k2:
+                label_tb = "Panjang Badan (cm)" if umur_bulan <= 24 else "Tinggi Badan (cm)"
+                fig_tbu = plot_kurva_zscore(
+                    df_tb, 
+                    x_col='Umur (bulan)', 
+                    x_val=umur_bulan, 
+                    y_val=tinggi, 
+                    title_text=f"Kurva {label_tb} Menurut Umur (TB/U)", 
+                    x_label="Umur (Bulan)", 
+                    y_label=label_tb
+                )
+                st.plotly_chart(fig_tbu, use_container_width=True)
+
+            with tab_k3:
+                fig_bbtb = plot_kurva_zscore(
+                    df_w, 
+                    x_col=kolom_tb, 
+                    x_val=tinggi, 
+                    y_val=berat, 
+                    title_text=f"Kurva Berat Badan Menurut {label_tb} (BB/TB)", 
+                    x_label=label_tb, 
+                    y_label="Berat Badan (kg)"
+                )
+                st.plotly_chart(fig_bbtb, use_container_width=True)
+
             # PROSES SIMPAN KE GOOGLE SPREADSHEET
             with st.spinner("Sedang menyimpan data ke database Google Sheets..."):
                 try:
@@ -206,7 +296,6 @@ with tab2:
         tgl_lahir_rem = st.date_input("Tanggal Lahir:", value=datetime.date(2015, 1, 1), key="tab2_tgl_lahir")
         tgl_periksa_rem = st.date_input("Tanggal Pemeriksaan:", value=datetime.date.today(), key="tab2_tgl_periksa")
 
-    # Hitung Total Bulan Penuh
     total_bulan_rem = (tgl_periksa_rem.year - tgl_lahir_rem.year) * 12 + (tgl_periksa_rem.month - tgl_lahir_rem.month)
     if tgl_periksa_rem.day < tgl_lahir_rem.day:
         total_bulan_rem -= 1
@@ -240,7 +329,6 @@ with tab2:
                 else:
                     row_data = row.iloc[0]
                     
-                    # Toleransi nama header kolom dari Excel IMT/U
                     sd3neg = row_data['- 3 SD'] if '- 3 SD' in row_data else row_data['-3 SD']
                     sd2neg = row_data['- 2 SD'] if '- 2 SD' in row_data else row_data['-2 SD']
                     sd1neg = row_data['- 1 SD'] if '- 1 SD' in row_data else row_data['-1 SD']
@@ -249,10 +337,8 @@ with tab2:
                     sd2pos = row_data['+2 SD'] if '+2 SD' in row_data else row_data['+ 2 SD']
                     sd3pos = row_data['+3 SD'] if '+3 SD' in row_data else row_data['+ 3 SD']
 
-                    # Perhitungan Nilai Eksak Z-Score IMT/U
                     z_imtu = hitung_zscore_multi(imt_rem, median, sd1neg, sd2neg, sd3neg, sd1pos, sd2pos, sd3pos)
 
-                    # Klasifikasi Berdasarkan Kategori Permenkes
                     if imt_rem < sd3neg:
                         kat_rem = "Gizi buruk (severely thinness)"
                     elif sd3neg <= imt_rem < sd2neg:
@@ -268,18 +354,34 @@ with tab2:
                     st.subheader(f"Hasil Analisis: {nama_rem}")
                     st.info(f"Analisis berdasarkan Umur: {tahun_lookup} Tahun {bulan_lookup} Bulan (Standar Buku Antropometri Kemenkes)")
 
-                    # Tampilan Z-Score dan Status Gizi
                     st.write(f"**Nilai IMT Pasien:** `{imt_rem:.2f} kg/m²`")
                     st.write(f"**Z-Score IMT/U:** `{z_imtu:.2f} SD`")
                     st.caption(f"Status: {kat_rem}")
 
-                    # --- PROSES SIMPAN KE GOOGLE SPREADSHEET (SHEET3) ---
+                    # =========================================================
+                    # 📈 TAMPILAN KURVA IMT/U (TAB 2)
+                    # =========================================================
+                    st.markdown("#### 📈 Grafis Kurva Pertumbuhan Pasien (IMT/U)")
+                    df_chart_tab2 = df_selected.copy()
+                    df_chart_tab2['Total_Bulan'] = df_chart_tab2['Tahun'] * 12 + df_chart_tab2['Bulan']
+                    
+                    fig_imtu = plot_kurva_zscore(
+                        df_chart_tab2,
+                        x_col='Total_Bulan',
+                        x_val=total_bulan_rem,
+                        y_val=imt_rem,
+                        title_text="Kurva Indeks Massa Tubuh Menurut Umur (IMT/U)",
+                        x_label="Umur (Bulan)",
+                        y_label="IMT (kg/m²)"
+                    )
+                    st.plotly_chart(fig_imtu, use_container_width=True)
+
+                    # PROSES SIMPAN KE GOOGLE SPREADSHEET (SHEET3)
                     with st.spinner("Sedang menyimpan data ke database Google Sheets (Sheet3)..."):
                         try:
                             client_sheet = koneksi_spreadsheet().spreadsheet
                             sheet3 = client_sheet.worksheet("Sheet3")
 
-                            # Buat header otomatis jika Sheet3 masih kosong
                             if len(sheet3.get_all_values()) == 0:
                                 header = [
                                     "Waktu Input", "Nama Anak", "Jenis Kelamin", 
@@ -290,18 +392,9 @@ with tab2:
 
                             waktu_skrg = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                             baris_baru_tab2 = [
-                                waktu_skrg,
-                                nama_rem,
-                                jk_rem,
-                                str(tgl_lahir_rem),
-                                str(tgl_periksa_rem),
-                                tahun_lookup,
-                                bulan_lookup,
-                                bb_rem,
-                                tb_rem,
-                                f"{imt_rem:.2f}",
-                                f"{z_imtu:.2f}",
-                                kat_rem
+                                waktu_skrg, nama_rem, jk_rem, str(tgl_lahir_rem), str(tgl_periksa_rem),
+                                tahun_lookup, bulan_lookup, bb_rem, tb_rem, f"{imt_rem:.2f}",
+                                f"{z_imtu:.2f}", kat_rem
                             ]
 
                             sheet3.append_row(baris_baru_tab2)
@@ -310,7 +403,6 @@ with tab2:
                         except Exception as sheet_err:
                             st.error(f"Gagal menyimpan ke Sheet3: {sheet_err}")
 
-                    # Tabel Referensi Permenkes
                     with st.expander("📖 Lihat Tabel Referensi Ambang Batas (Z-Score) Kemenkes"):
                         st.markdown("""
                         | Indeks | Kategori Status Gizi | Ambang Batas (Z-Score) |
@@ -341,7 +433,6 @@ with tab3:
         tb_m_dw = tb_dw / 100
         imt_dw = bb_dw / (tb_m_dw ** 2)
 
-        # Standar Klasifikasi IMT Dewasa Kemenkes RI
         if imt_dw < 18.5:
             kat_dw, box_dw = "Berat Badan Kurang (Underweight)", st.warning
         elif 18.5 <= imt_dw <= 22.9:
