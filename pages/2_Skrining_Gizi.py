@@ -40,10 +40,20 @@ def plot_kurva_zscore(df_ref, x_col, x_val, y_val, title_text, x_label, y_label)
         marker=dict(color='blue', size=13, symbol='circle', line=dict(color='white', width=2))
     ))
 
+    # PENGATURAN INTERVAL SUMBU X (SELISIH 10) DAN SUMBU Y (SELISIH 2)
     fig.update_layout(
         title=f"<b>{title_text}</b>",
-        xaxis_title=x_label,
-        yaxis_title=y_label,
+        xaxis=dict(
+            title=x_label,
+            dtick=10,        # Sumbu X meloncat kelipatan 10
+            tick0=0,         # Memulai penanda dari angka 0
+            showgrid=True
+        ),
+        yaxis=dict(
+            title=y_label,
+            dtick=2,         # Sumbu Y meloncat kelipatan 2
+            showgrid=True
+        ),
         legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5),
         margin=dict(l=20, r=20, t=40, b=20),
         template="plotly_white"
