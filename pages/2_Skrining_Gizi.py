@@ -45,13 +45,13 @@ def plot_kurva_zscore(df_ref, x_col, x_val, y_val, title_text, x_label, y_label)
         title=f"<b>{title_text}</b>",
         xaxis=dict(
             title=x_label,
-            dtick=10,        # Sumbu X meloncat kelipatan 10
+            dtick=2,        # Sumbu X meloncat kelipatan 2
             tick0=0,         # Memulai penanda dari angka 0
             showgrid=True
         ),
         yaxis=dict(
             title=y_label,
-            dtick=2,         # Sumbu Y meloncat kelipatan 2
+            dtick=10,         # Sumbu Y meloncat kelipatan 10
             showgrid=True
         ),
         legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5),
